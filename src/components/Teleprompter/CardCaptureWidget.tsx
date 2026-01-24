@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { flattenCardDatabase } from '../../tarotCardDatabase';
-import { parseCardFromSpeech } from '../../cardMatcher';
+import { parseCardFromSpeech } from '../../utils/cardMatcher';
 import { Check, X, Target, Activity } from 'lucide-react';
 
 interface CardCaptureWidgetProps {
