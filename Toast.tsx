@@ -63,6 +63,7 @@ const Toast: React.FC<ToastProps> = ({ message, code, type = 'error', onClose, d
           </div>
           <button 
             onClick={onClose}
+            aria-label="Close notification"
             className="absolute top-4 right-4 p-1.5 hover:bg-white/5 rounded-lg text-slate-500 hover:text-white transition-all"
           >
             <X className="w-4 h-4" />

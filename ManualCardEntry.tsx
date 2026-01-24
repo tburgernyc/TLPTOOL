@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { TarotCard, Spread, SpreadPreset } from '../types';
+import { TarotCard, Spread, SpreadPreset } from './types';
 import { RotateCw, Search, CheckCircle2, AlertCircle, Mic, MicOff, Save, FolderOpen, Trash2, Layout } from 'lucide-react';
-import { flattenCardDatabase } from '../tarotCardDatabase';
-import { findCardMatch, parseCardFromSpeech } from '../cardMatcher';
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { flattenCardDatabase } from './tarotCardDatabase';
+import { findCardMatch, parseCardFromSpeech } from './cardMatcher';
+import { useSpeechRecognition } from './useSpeechRecognition';
 
 interface ManualCardEntryProps {
   spread: Spread;
@@ -271,7 +271,11 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
                 <button onClick={() => onChange(p.spread)} className="flex-1 text-left">
                   <p className="text-[10px] font-black text-white uppercase tracking-widest group-hover/preset:text-taupe-accent transition-colors">{p.name}</p>
                 </button>
-                <button onClick={() => savePresets(presets.filter(pr => pr.id !== p.id))} className="p-2 text-slate-800 hover:text-rose-500 transition-colors">
+                <button
+                  onClick={() => savePresets(presets.filter(pr => pr.id !== p.id))}
+                  className="p-2 text-slate-800 hover:text-rose-500 transition-colors"
+                  aria-label={`Delete preset ${p.name}`}
+                >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>

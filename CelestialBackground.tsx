@@ -1,18 +1,57 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Star, Moon, Sparkles, Compass } from 'lucide-react';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { Moon, Sparkles, Compass } from 'lucide-react';
 
 const CelestialBackground: React.FC = () => {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const bgRef = useRef<HTMLDivElement>(null);
+  const radianceRef = useRef<HTMLDivElement>(null);
+  const backStarsRef = useRef<HTMLDivElement>(null);
+  const midStarsRef = useRef<HTMLDivElement>(null);
+  const frontStarsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({
-        x: (e.clientX / window.innerWidth) * 2 - 1,
-        y: (e.clientY / window.innerHeight) * 2 - 1,
-      });
+    let requestRef: number;
+    let ticking = false;
+    let clientX = 0;
+    let clientY = 0;
+
+    const updatePosition = () => {
+      const x = (clientX / window.innerWidth) * 2 - 1;
+      const y = (clientY / window.innerHeight) * 2 - 1;
+
+      if (bgRef.current) {
+        bgRef.current.style.transform = `translate(${x * -15}px, ${y * -15}px) scale(1.15)`;
+      }
+      if (radianceRef.current) {
+        radianceRef.current.style.transform = `translate(${x * 20}px, ${y * 20}px) translate(-50%, -50%)`;
+      }
+      if (backStarsRef.current) {
+        backStarsRef.current.style.transform = `translate(${x * -30}px, ${y * -30}px)`;
+      }
+      if (midStarsRef.current) {
+        midStarsRef.current.style.transform = `translate(${x * -60}px, ${y * -60}px)`;
+      }
+      if (frontStarsRef.current) {
+        frontStarsRef.current.style.transform = `translate(${x * -120}px, ${y * -120}px)`;
+      }
+
+      ticking = false;
     };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      clientX = e.clientX;
+      clientY = e.clientY;
+
+      if (!ticking) {
+        ticking = true;
+        requestRef = requestAnimationFrame(updatePosition);
+      }
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(requestRef);
+    };
   }, []);
 
   const starLayers = useMemo(() => {
@@ -37,17 +76,19 @@ const CelestialBackground: React.FC = () => {
     <div className="fixed inset-0 z-[-10] bg-[#010101] overflow-hidden celestial-container pointer-events-none">
       {/* Primary Cinematic Asset Background */}
       <div 
+        ref={bgRef}
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-60 scale-105 transition-transform duration-1000 ease-out"
         style={{ 
           backgroundImage: `url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=2300&auto=format&fit=crop')`, 
-          transform: `translate(${mousePos.x * -15}px, ${mousePos.y * -15}px) scale(1.15)`
+          transform: `translate(0px, 0px) scale(1.15)`
         }} 
       />
 
       {/* Central Radiance */}
       <div 
+        ref={radianceRef}
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] bg-gradient-radial from-gold-600/10 via-amber-900/5 to-transparent blur-[120px] animate-soft-pulse"
-        style={{ transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px) translate(-50%, -50%)` }}
+        style={{ transform: `translate(0px, 0px) translate(-50%, -50%)` }}
       />
 
       {/* Rotating Orbital Rings */}
@@ -63,8 +104,9 @@ const CelestialBackground: React.FC = () => {
 
       {/* Parallax Star Layers */}
       <div 
+        ref={backStarsRef}
         className="absolute inset-0 transition-transform duration-700 ease-out"
-        style={{ transform: `translate(${mousePos.x * -30}px, ${mousePos.y * -30}px)` }}
+        style={{ transform: `translate(0px, 0px)` }}
       >
         {starLayers.back.map((star) => (
           <div
@@ -83,8 +125,9 @@ const CelestialBackground: React.FC = () => {
       </div>
 
       <div 
+        ref={midStarsRef}
         className="absolute inset-0 transition-transform duration-500 ease-out"
-        style={{ transform: `translate(${mousePos.x * -60}px, ${mousePos.y * -60}px)` }}
+        style={{ transform: `translate(0px, 0px)` }}
       >
         {starLayers.mid.map((star) => (
           <div
@@ -103,8 +146,9 @@ const CelestialBackground: React.FC = () => {
       </div>
 
       <div 
+        ref={frontStarsRef}
         className="absolute inset-0 transition-transform duration-300 ease-out"
-        style={{ transform: `translate(${mousePos.x * -120}px, ${mousePos.y * -120}px)` }}
+        style={{ transform: `translate(0px, 0px)` }}
       >
         {starLayers.front.map((star) => (
           <div
