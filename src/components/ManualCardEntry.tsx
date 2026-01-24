@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { TarotCard, Spread, SpreadPreset } from '../types';
 import { RotateCw, Search, CheckCircle2, AlertCircle, Mic, MicOff, Save, FolderOpen, Trash2, Layout } from 'lucide-react';
 import { flattenCardDatabase } from '../tarotCardDatabase';
-import { findCardMatch, parseCardFromSpeech } from '../cardMatcher';
+import { findCardMatch, parseCardFromSpeech } from '../utils/cardMatcher';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 interface ManualCardEntryProps {
@@ -238,14 +238,6 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
     onChange(newSpread);
   }, [spread, onChange]);
 
-  const SectionHeader = ({ label, colorClass = "bg-taupe-accent" }: { label: string, colorClass?: string }) => (
-    <div className="flex items-center gap-4 px-2 mb-10 group">
-      <div className={`w-2 h-2 rounded-full ${colorClass} shadow-[0_0_15px_rgba(155,155,155,0.4)]`} />
-      <h4 className="text-[12px] font-black text-white uppercase tracking-[0.5em] opacity-80">{label}</h4>
-      <div className="flex-1 h-px bg-gradient-to-r from-white/[0.05] to-transparent ml-4" />
-    </div>
-  );
-
   return (
     <div className="space-y-16 animate-fade-in-up">
       <section className="neo-3d-card p-10 space-y-8 relative overflow-hidden">
@@ -306,5 +298,13 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
     </div>
   );
 };
+
+const SectionHeader = ({ label, colorClass = "bg-taupe-accent" }: { label: string, colorClass?: string }) => (
+  <div className="flex items-center gap-4 px-2 mb-10 group">
+    <div className={`w-2 h-2 rounded-full ${colorClass} shadow-[0_0_15px_rgba(155,155,155,0.4)]`} />
+    <h4 className="text-[12px] font-black text-white uppercase tracking-[0.5em] opacity-80">{label}</h4>
+    <div className="flex-1 h-px bg-gradient-to-r from-white/[0.05] to-transparent ml-4" />
+  </div>
+);
 
 export default ManualCardEntry;
