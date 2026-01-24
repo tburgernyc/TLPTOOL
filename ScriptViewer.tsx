@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GeneratedReading, ReadingMode, Spread } from '../types';
+import { GeneratedReading, ReadingMode, Spread } from './types';
 import { Copy, Download, Check, Type, Tv, Play, Pause, Volume2, Activity, Music, Sparkles } from 'lucide-react';
-import TeleprompterModal from './Teleprompter/TeleprompterModal';
+import TeleprompterModal from './TeleprompterModal';
 
 interface ScriptViewerProps {
   reading: GeneratedReading;
@@ -279,6 +279,7 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
               
               <button 
                 onClick={handlePlayAudio}
+                aria-label={isPlaying ? "Pause audio synthesis" : "Play audio synthesis"}
                 className={`relative w-28 h-28 rounded-full flex items-center justify-center transition-all duration-700 shadow-2xl ${
                   isPlaying 
                   ? 'bg-gold-accent text-black scale-105 shadow-gold-accent/40' 
@@ -349,16 +350,30 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
               if (!line.trim()) return <div key={i} className="h-8" />;
               
               const isPauseLine = line.includes('[PAUSE]');
-              let processedLine = line
-                .replace(/\[PAUSE\]/g, '<span class="bg-white/5 border border-white/10 text-taupe-accent px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[0.2em] rounded-lg mx-1 align-middle inline-block">PAUSE</span>')
-                .replace(/\[EMPHASIS\]/g, '<span class="bg-gold-accent/10 border border-gold-accent/20 text-gold-accent px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[0.2em] rounded-lg mx-1 align-middle italic inline-block">STRESS</span>');
 
               return (
                 <p 
                   key={i} 
                   className={`mb-12 transition-all hover:text-white duration-500 ${isPauseLine ? 'border-l-2 border-gold-accent/10 pl-10' : ''}`}
-                  dangerouslySetInnerHTML={{ __html: processedLine }}
-                />
+                >
+                  {line.split(/(\[PAUSE\]|\[EMPHASIS\])/g).map((part, index) => {
+                    if (part === '[PAUSE]') {
+                      return (
+                        <span key={index} className="bg-white/5 border border-white/10 text-taupe-accent px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[0.2em] rounded-lg mx-1 align-middle inline-block">
+                          PAUSE
+                        </span>
+                      );
+                    }
+                    if (part === '[EMPHASIS]') {
+                      return (
+                        <span key={index} className="bg-gold-accent/10 border border-gold-accent/20 text-gold-accent px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[0.2em] rounded-lg mx-1 align-middle italic inline-block">
+                          STRESS
+                        </span>
+                      );
+                    }
+                    return part;
+                  })}
+                </p>
               );
             })}
           </div>

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Layout from './components/Layout';
-import ReadingForm from './components/ReadingForm';
-import TarotSpreadVisualizer from './components/TarotSpreadVisualizer';
-import ManualCardEntry from './components/ManualCardEntry';
-import ScriptViewer from './components/ScriptViewer';
-import Toast, { ToastType } from './components/Toast';
-import LoadingIndicator from './components/LoadingIndicator';
+import Layout from './Layout';
+import ReadingForm from './ReadingForm';
+import TarotSpreadVisualizer from './TarotSpreadVisualizer';
+import ManualCardEntry from './ManualCardEntry';
+import ScriptViewer from './ScriptViewer';
+import Toast, { ToastType } from './Toast';
+import LoadingIndicator from './LoadingIndicator';
 import { ReadingParams, GeneratedReading, Spread, TarotCard, ReadingMode } from './types';
 import { TAROT_DECK } from './constants';
-import { fetchAstrology, generatePart1, generatePart2, generateSpeech, TLPError } from './services/geminiService';
+import { fetchAstrology, generatePart1, generatePart2, generateSpeech, TLPError } from './geminiService';
 import { Moon, Star, ChevronDown, ChevronUp, History, Trash2, Clock, ShieldCheck, Zap, Globe, ChevronRight, Sparkles, Layout as LayoutIcon, Eye, EyeOff } from 'lucide-react';
 
 const App: React.FC = () => {
