@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type, GenerateContentParameters, Modality } from "@google/genai";
-import { AstrologyData, ReadingParams, Spread, ReadingLength, ReadingMode } from "../types";
-import { TLP_MASTER_PROMPT, HOOK_PHRASES } from "../constants";
+import { AstrologyData, ReadingParams, Spread, ReadingLength, ReadingMode } from "./types";
+import { TLP_MASTER_PROMPT, HOOK_PHRASES } from "./constants";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
