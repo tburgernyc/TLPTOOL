@@ -1,8 +1,19 @@
 import { GoogleGenAI, Type, GenerateContentParameters, Modality } from "@google/genai";
-import { AstrologyData, ReadingParams, Spread, ReadingLength, ReadingMode } from "../types";
-import { TLP_MASTER_PROMPT, HOOK_PHRASES } from "../constants";
+import { AstrologyData, ReadingParams, Spread, ReadingLength, ReadingMode } from "./types";
+import { TLP_MASTER_PROMPT, HOOK_PHRASES } from "./constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI(): GoogleGenAI {
+  if (!aiInstance) {
+    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("Gemini API Key is missing. Calls will fail.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey: apiKey || '' });
+  }
+  return aiInstance;
+}
 
 export class TLPError extends Error {
   constructor(public message: string, public code?: string, public retryable: boolean = false) {
@@ -16,7 +27,7 @@ async function callGemini(params: GenerateContentParameters, maxRetries = 3): Pr
   
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const response = await ai.models.generateContent(params);
+      const response = await getAI().models.generateContent(params);
       return response;
     } catch (error: any) {
       lastError = error;

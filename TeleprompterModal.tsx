@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
-import { parseScriptToWords, findMatchingWordIndex, WordToken } from '../../utils/scriptParser';
+import { useSpeechRecognition } from './useSpeechRecognition';
+import { parseScriptToWords, findMatchingWordIndex, WordToken } from './scriptParser';
 import { X, Play, Pause, RotateCcw, Mic, MicOff, Type, FlipHorizontal, ChevronLeft, ChevronRight, Zap, Radio, Info, Activity, MousePointer2, BrainCircuit, Keyboard } from 'lucide-react';
 import CardCaptureWidget from './CardCaptureWidget';
-import Toast, { ToastType } from '../Toast';
-import { generatePart2, TLPError } from '../../services/geminiService';
-import LoadingIndicator from '../LoadingIndicator';
-import { Spread, ReadingParams, AstrologyData } from '../../types';
+import Toast, { ToastType } from './Toast';
+import { generatePart2, TLPError } from './geminiService';
+import LoadingIndicator from './LoadingIndicator';
+import { Spread, ReadingParams, AstrologyData } from './types';
 import './Teleprompter.css';
 
 interface TeleprompterModalProps {
