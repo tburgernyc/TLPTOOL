@@ -51,14 +51,18 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
       
       // Only process if the transcript has changed significantly
       if (fullText && fullText !== lastProcessedTranscript) {
-        setListeningStatus('Scanning...');
-        const parsed = parseCardFromSpeech(fullText, flatDatabase);
+        const timeoutId = setTimeout(() => {
+          setListeningStatus('Scanning...');
+          const parsed = parseCardFromSpeech(fullText, flatDatabase);
+
+          if (parsed.success) {
+            setPendingCard(parsed);
+            setListeningStatus(parsed.card.name);
+            setLastProcessedTranscript(fullText);
+          }
+        }, 500);
         
-        if (parsed.success) {
-          setPendingCard(parsed);
-          setListeningStatus(parsed.card.name);
-          setLastProcessedTranscript(fullText);
-        }
+        return () => clearTimeout(timeoutId);
       } else if (!fullText) {
         setListeningStatus('Awaiting Node...');
       }
@@ -135,6 +139,7 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
               <button 
                 onClick={isListening ? stop : start} 
                 disabled={capturedCards.length >= 13}
+                aria-label={isListening ? "Stop Scanning" : "Initialize Capture"}
                 className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-500 border-2 ${
                   isListening 
                   ? 'bg-emerald-500 border-emerald-400 text-black shadow-[0_0_30px_rgba(16,185,129,0.5)]' 
