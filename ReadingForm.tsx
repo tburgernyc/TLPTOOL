@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ReadingParams, ReadingMode, ReadingLength } from '../types';
-import { ZODIAC_SIGNS } from '../constants';
+import { ReadingParams, ReadingMode, ReadingLength } from './types';
+import { ZODIAC_SIGNS } from './constants';
 import { Calendar, User, Info, Wand2, BookOpen, ChevronDown, ArrowRight, Clock, MapPin, Baby, Volume2, Check } from 'lucide-react';
 import LoadingIndicator from './LoadingIndicator';
 

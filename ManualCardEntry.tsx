@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { TarotCard, Spread, SpreadPreset } from '../types';
+import { TarotCard, Spread, SpreadPreset } from './types';
 import { RotateCw, Search, CheckCircle2, AlertCircle, Mic, MicOff, Save, FolderOpen, Trash2, Layout } from 'lucide-react';
-import { flattenCardDatabase } from '../tarotCardDatabase';
-import { findCardMatch, parseCardFromSpeech } from '../cardMatcher';
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { flattenCardDatabase } from './tarotCardDatabase';
+import { findCardMatch, parseCardFromSpeech } from './cardMatcher';
+import { useSpeechRecognition } from './useSpeechRecognition';
 
 interface ManualCardEntryProps {
   spread: Spread;
