@@ -18,20 +18,16 @@ interface CardInputProps {
   onUpdate: (section: keyof Spread, index: number | null, updates: Partial<TarotCard>) => void;
 }
 
+const DIGIT_MAP: { [key: string]: string } = {
+  '1': 'Ace', '2': 'Two', '3': 'Three', '4': 'Four', '5': 'Five',
+  '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten'
+};
+
+const DIGIT_REGEX = /\b(10|9|8|7|6|5|4|3|2|1)\b/g;
+
 const digitToWord = (text: string): string => {
-  const map: { [key: string]: string } = {
-    '1': 'Ace', '2': 'Two', '3': 'Three', '4': 'Four', '5': 'Five',
-    '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten'
-  };
-
-  let processed = text;
-  const keys = Object.keys(map).sort((a, b) => b.length - a.length);
-  keys.forEach(num => {
-    const regex = new RegExp(`\\b${num}\\b`, 'g');
-    processed = processed.replace(regex, map[num]);
-  });
-
-  return processed;
+  if (!/\d/.test(text)) return text;
+  return text.replace(DIGIT_REGEX, (match) => DIGIT_MAP[match]);
 };
 
 const CardInput: React.FC<CardInputProps> = ({ 
