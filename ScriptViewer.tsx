@@ -279,6 +279,7 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
               
               <button 
                 onClick={handlePlayAudio}
+                aria-label={isPlaying ? "Pause audio synthesis" : "Play audio synthesis"}
                 className={`relative w-28 h-28 rounded-full flex items-center justify-center transition-all duration-700 shadow-2xl ${
                   isPlaying 
                   ? 'bg-gold-accent text-black scale-105 shadow-gold-accent/40' 
