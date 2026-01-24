@@ -9,48 +9,23 @@ const CelestialBackground: React.FC = () => {
   const frontStarsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let requestRef: number;
-    let ticking = false;
-    let clientX = 0;
-    let clientY = 0;
-
-    const updatePosition = () => {
-      const x = (clientX / window.innerWidth) * 2 - 1;
-      const y = (clientY / window.innerHeight) * 2 - 1;
-
-      if (bgRef.current) {
-        bgRef.current.style.transform = `translate(${x * -15}px, ${y * -15}px) scale(1.15)`;
-      }
-      if (radianceRef.current) {
-        radianceRef.current.style.transform = `translate(${x * 20}px, ${y * 20}px) translate(-50%, -50%)`;
-      }
-      if (backStarsRef.current) {
-        backStarsRef.current.style.transform = `translate(${x * -30}px, ${y * -30}px)`;
-      }
-      if (midStarsRef.current) {
-        midStarsRef.current.style.transform = `translate(${x * -60}px, ${y * -60}px)`;
-      }
-      if (frontStarsRef.current) {
-        frontStarsRef.current.style.transform = `translate(${x * -120}px, ${y * -120}px)`;
-      }
-
-      ticking = false;
-    };
+    let animationFrameId: number;
 
     const handleMouseMove = (e: MouseEvent) => {
-      clientX = e.clientX;
-      clientY = e.clientY;
-
-      if (!ticking) {
-        ticking = true;
-        requestRef = requestAnimationFrame(updatePosition);
-      }
+      // Throttle updates using requestAnimationFrame to improve performance
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => {
+        setMousePos({
+          x: (e.clientX / window.innerWidth) * 2 - 1,
+          y: (e.clientY / window.innerHeight) * 2 - 1,
+        });
+      });
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(requestRef);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
