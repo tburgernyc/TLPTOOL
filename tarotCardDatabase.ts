@@ -41,9 +41,15 @@ export const TAROT_DECK_DATA = {
 
 export const flattenCardDatabase = () => {
   const flattened: any[] = [];
-  TAROT_DECK_DATA.majorArcana.forEach(c => flattened.push(c));
+  TAROT_DECK_DATA.majorArcana.forEach(c => flattened.push({
+    ...c,
+    normalizedNames: c.names.map(n => n.toLowerCase().trim())
+  }));
   Object.values(TAROT_DECK_DATA.minorArcana).forEach(suit => {
-    suit.forEach(c => flattened.push(c));
+    suit.forEach(c => flattened.push({
+      ...c,
+      normalizedNames: c.names.map(n => n.toLowerCase().trim())
+    }));
   });
   return flattened;
 };
