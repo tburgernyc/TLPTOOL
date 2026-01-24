@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { GeneratedReading, ReadingMode, Spread } from './types';
 import { Copy, Download, Check, Type, Tv, Play, Pause, Volume2, Activity, Music, Sparkles } from 'lucide-react';
 import TeleprompterModal from './TeleprompterModal';
@@ -210,6 +210,39 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
   const isManualTwoPart = reading.params.mode === ReadingMode.MANUAL_COLLECTIVE || reading.params.mode === ReadingMode.MANUAL_SPECIFIC;
   const isOnlyPhase1 = isManualTwoPart && !reading.readingBody;
 
+  const parsedScriptElements = useMemo(() => {
+    return reading.fullScript.split('\n').map((line, i) => {
+      if (!line.trim()) return <div key={i} className="h-8" />;
+
+      const isPauseLine = line.includes('[PAUSE]');
+
+      return (
+        <p
+          key={i}
+          className={`mb-12 transition-all hover:text-white duration-500 ${isPauseLine ? 'border-l-2 border-gold-accent/10 pl-10' : ''}`}
+        >
+          {line.split(/(\[PAUSE\]|\[EMPHASIS\])/g).map((part, index) => {
+            if (part === '[PAUSE]') {
+              return (
+                <span key={index} className="bg-white/5 border border-white/10 text-taupe-accent px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[0.2em] rounded-lg mx-1 align-middle inline-block">
+                  PAUSE
+                </span>
+              );
+            }
+            if (part === '[EMPHASIS]') {
+              return (
+                <span key={index} className="bg-gold-accent/10 border border-gold-accent/20 text-gold-accent px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[0.2em] rounded-lg mx-1 align-middle italic inline-block">
+                  STRESS
+                </span>
+              );
+            }
+            return part;
+          })}
+        </p>
+      );
+    });
+  }, [reading.fullScript]);
+
   return (
     <div className="space-y-12 animate-fade-in-up">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/[0.03] pb-10">
@@ -346,36 +379,7 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
             className="whitespace-pre-wrap text-[#D1D1D1] transition-all duration-300" 
             style={{ fontSize: `${fontSize}px` }}
           >
-            {reading.fullScript.split('\n').map((line, i) => {
-              if (!line.trim()) return <div key={i} className="h-8" />;
-              
-              const isPauseLine = line.includes('[PAUSE]');
-
-              return (
-                <p 
-                  key={i} 
-                  className={`mb-12 transition-all hover:text-white duration-500 ${isPauseLine ? 'border-l-2 border-gold-accent/10 pl-10' : ''}`}
-                >
-                  {line.split(/(\[PAUSE\]|\[EMPHASIS\])/g).map((part, index) => {
-                    if (part === '[PAUSE]') {
-                      return (
-                        <span key={index} className="bg-white/5 border border-white/10 text-taupe-accent px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[0.2em] rounded-lg mx-1 align-middle inline-block">
-                          PAUSE
-                        </span>
-                      );
-                    }
-                    if (part === '[EMPHASIS]') {
-                      return (
-                        <span key={index} className="bg-gold-accent/10 border border-gold-accent/20 text-gold-accent px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[0.2em] rounded-lg mx-1 align-middle italic inline-block">
-                          STRESS
-                        </span>
-                      );
-                    }
-                    return part;
-                  })}
-                </p>
-              );
-            })}
+            {parsedScriptElements}
           </div>
 
           {isOnlyPhase1 && (
