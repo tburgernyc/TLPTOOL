@@ -34,7 +34,7 @@ const App: React.FC = () => {
     bottom: pullRandomCard()
   }), [pullRandomCard]);
 
-  const [manualSpread, setManualSpread] = useState<Spread>(generateRandomSpread());
+  const [manualSpread, setManualSpread] = useState<Spread>(() => generateRandomSpread());
 
   useEffect(() => {
     const saved = localStorage.getItem('tlp_history');
