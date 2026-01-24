@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GeneratedReading, ReadingMode, Spread } from '../types';
+import { GeneratedReading, ReadingMode, Spread } from './types';
 import { Copy, Download, Check, Type, Tv, Play, Pause, Volume2, Activity, Music, Sparkles } from 'lucide-react';
-import TeleprompterModal from './Teleprompter/TeleprompterModal';
+import TeleprompterModal from './TeleprompterModal';
 
 interface ScriptViewerProps {
   reading: GeneratedReading;

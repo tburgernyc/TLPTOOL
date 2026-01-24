@@ -1,5 +1,5 @@
 import React from 'react';
-import { Spread, TarotCard } from '../types';
+import { Spread, TarotCard } from './types';
 
 interface CardItemProps {
   card: TarotCard;
