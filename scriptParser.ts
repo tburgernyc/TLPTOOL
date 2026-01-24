@@ -100,15 +100,19 @@ export function findMatchingWordIndex(
 
   const searchRange = Math.min(startIndex + lookAhead, wordArray.length);
 
+  const lastSpokenWord = lastThree[lastThree.length - 1];
+  const spokenPhrase = lastThree.length > 1
+    ? (lastThree[lastThree.length - 2] + ' ' + lastThree[lastThree.length - 1])
+    : null;
+
   for (let i = startIndex; i < searchRange; i++) {
     // Check single word match confidence
-    const singleMatch = jaroWinkler(wordArray[i].text, lastThree[lastThree.length - 1]);
+    const singleMatch = jaroWinkler(wordArray[i].text, lastSpokenWord);
     
     // Check bigram match confidence if possible
     let multiMatch = 0;
-    if (i > 0 && lastThree.length > 1) {
+    if (i > 0 && spokenPhrase !== null) {
       const scriptPhrase = (wordArray[i-1].text + ' ' + wordArray[i].text);
-      const spokenPhrase = (lastThree[lastThree.length - 2] + ' ' + lastThree[lastThree.length - 1]);
       multiMatch = jaroWinkler(scriptPhrase, spokenPhrase);
     }
 
