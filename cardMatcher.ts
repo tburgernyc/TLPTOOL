@@ -49,30 +49,29 @@ function jaroWinkler(s1: string, s2: string): number {
   return jaro + l * p * (1 - jaro);
 }
 
+const NUMERIC_MAP: { [key: string]: string } = {
+  '1': 'ace', 'one': 'ace',
+  '2': 'two', 'too': 'two', 'to': 'two',
+  '3': 'three', 'free': 'three',
+  '4': 'four', 'for': 'four',
+  '5': 'five',
+  '6': 'six',
+  '7': 'seven',
+  '8': 'eight', 'ate': 'eight',
+  '9': 'nine',
+  '10': 'ten',
+  '0': 'zero'
+};
+const NUMERIC_KEYS = Object.keys(NUMERIC_MAP).sort((a, b) => b.length - a.length);
+const NUMERIC_REGEX = new RegExp(`\\b(${NUMERIC_KEYS.join('|')})\\b`, 'g');
+
 /**
  * Maps numeric words and digits to card name terminology.
  */
 function normalizeNumericTerms(text: string): string {
-  const map: { [key: string]: string } = {
-    '1': 'ace', 'one': 'ace',
-    '2': 'two', 'too': 'two', 'to': 'two',
-    '3': 'three', 'free': 'three',
-    '4': 'four', 'for': 'four',
-    '5': 'five',
-    '6': 'six',
-    '7': 'seven',
-    '8': 'eight', 'ate': 'eight',
-    '9': 'nine',
-    '10': 'ten',
-    '0': 'zero'
-  };
-
-  let processed = text.toLowerCase();
-  Object.keys(map).forEach(key => {
-    const regex = new RegExp(`\\b${key}\\b`, 'g');
-    processed = processed.replace(regex, map[key]);
+  return text.toLowerCase().replace(NUMERIC_REGEX, (match) => {
+    return NUMERIC_MAP[match];
   });
-  return processed;
 }
 
 /**
@@ -222,17 +221,15 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
   return bestMatch;
 };
 
+const NOISE_WORDS = ['reversed', 'reverse', 'upright', 'up right', 'inverted', 'invert', 'of', 'the', 'upside down', 'backwards', 'standing', 'normal', 'standard', 'stable', 'flipped', 'card', 'is', 'sitting', 'shows', 'here'];
+const NOISE_WORDS_SORTED = [...NOISE_WORDS].sort((a, b) => b.length - a.length);
+const NOISE_REGEX = new RegExp(`\\b(${NOISE_WORDS_SORTED.join('|')})\\b`, 'gi');
+
 export const parseCardFromSpeech = (spokenText: string, flatDatabase: any[]) => {
   const position = extractCardPosition(spokenText);
   
   // Strip position markers and common noise words to isolate the core card name
-  const noiseWords = ['reversed', 'reverse', 'upright', 'up right', 'inverted', 'invert', 'of', 'the', 'upside down', 'backwards', 'standing', 'normal', 'standard', 'stable', 'flipped', 'card', 'is', 'sitting', 'shows', 'here'];
-  
-  let cleanedText = spokenText.toLowerCase();
-  noiseWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    cleanedText = cleanedText.replace(regex, ' ');
-  });
+  let cleanedText = spokenText.toLowerCase().replace(NOISE_REGEX, ' ');
   
   cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
     
