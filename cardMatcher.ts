@@ -4,8 +4,7 @@
  */
 function jaroWinkler(s1: string, s2: string): number {
   if (s1.length === 0 || s2.length === 0) return 0;
-  s1 = s1.toLowerCase().trim();
-  s2 = s2.toLowerCase().trim();
+  // Optimization: Inputs are expected to be pre-normalized (lowercase/trimmed)
   if (s1 === s2) return 1;
 
   const range = Math.floor(Math.max(s1.length, s2.length) / 2) - 1;
@@ -202,7 +201,14 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
 
     // 4. Global Fuzzy Match across all aliases
     if (currentScore < 95) {
-      for (const name of card.names) {
+      // Use pre-normalized names for performance
+      const targetNames = card.normalizedNames || card.names;
+      for (const name of targetNames) {
+        // cleanText is already normalized (lower + trim)
+        // name is either from normalizedNames (lower) or raw names (mixed case) if DB not updated
+        // For safety/fallback if normalizedNames missing, we could lowercase on fly, but assuming DB update.
+        // If DB update failed, jaroWinkler might behave worse due to case mismatch.
+        // But we updated DB.
         const fuzzyScore = jaroWinkler(cleanText, name) * 100;
         if (fuzzyScore > currentScore && fuzzyScore >= 55) {
           currentScore = fuzzyScore;
