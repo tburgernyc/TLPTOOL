@@ -222,17 +222,18 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
   return bestMatch;
 };
 
+// Pre-compile regex for noise word stripping
+const NOISE_WORDS = ['reversed', 'reverse', 'upright', 'up right', 'inverted', 'invert', 'of', 'the', 'upside down', 'backwards', 'standing', 'normal', 'standard', 'stable', 'flipped', 'card', 'is', 'sitting', 'shows', 'here'];
+
+const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const NOISE_REGEX = new RegExp(`\\b(?:${NOISE_WORDS.map(escapeRegExp).join('|')})\\b`, 'gi');
+
 export const parseCardFromSpeech = (spokenText: string, flatDatabase: any[]) => {
   const position = extractCardPosition(spokenText);
   
   // Strip position markers and common noise words to isolate the core card name
-  const noiseWords = ['reversed', 'reverse', 'upright', 'up right', 'inverted', 'invert', 'of', 'the', 'upside down', 'backwards', 'standing', 'normal', 'standard', 'stable', 'flipped', 'card', 'is', 'sitting', 'shows', 'here'];
-  
   let cleanedText = spokenText.toLowerCase();
-  noiseWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    cleanedText = cleanedText.replace(regex, ' ');
-  });
+  cleanedText = cleanedText.replace(NOISE_REGEX, ' ');
   
   cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
     
