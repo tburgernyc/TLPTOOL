@@ -1,0 +1,7 @@
+{
+  "name": "TLP Video Tool",
+  "description": "AI-powered tarot scriptwriting assistant for YouTube creators. Generates professional-quality, ready-to-record scripts based on real astrology and the TLP Master Prompt methodology.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
