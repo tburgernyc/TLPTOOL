@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TLP Video Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            backgroundImage: {
+              'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+              'gold-shimmer': 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.1) 50%, transparent 100%)',
+            },
+            colors: {
+              gold: {
+                50: '#fffdf0',
+                100: '#fef7cf',
+                200: '#fded9b',
+                300: '#fbdb5c',
+                400: '#f9c82d',
+                500: '#f4b00b',
+                600: '#d48d06',
+                700: '#a66508',
+                800: '#884e0e',
+                900: '#734010',
+                accent: '#D4AF37', // Classic gold
+              },
+              taupe: {
+                base: '#0A0A0A',
+                elevated1: '#1A1A1A',
+                elevated2: '#242424',
+                surface: '#2F2F2F',
+                accent: '#9B9B9B',
+                highlight: '#E8E8E8',
+                muted: '#6B6B6B',
+              }
+            },
+            fontFamily: {
+              sans: ['Space Grotesk', 'Roboto', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'soft-pulse': 'softPulse 6s infinite ease-in-out',
+              'float': 'float 8s ease-in-out infinite',
+              'shimmer': 'shimmer 3s infinite linear',
+              'celestial-drift': 'celestialDrift 45s infinite ease-in-out',
+              'star-twinkle': 'starTwinkle var(--twinkle-duration) infinite ease-in-out',
+              'orbit-slow': 'orbitSlow 150s infinite linear',
+              'glow-sweep': 'glowSweep 4s ease-in-out infinite',
+              'spin-slow': 'spin 20s linear infinite',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(40px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              softPulse: {
+                '0%, 100%': { opacity: '0.15', filter: 'blur(80px)' },
+                '50%': { opacity: '0.35', filter: 'blur(110px)' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0) scale(1)' },
+                '50%': { transform: 'translateY(-15px) scale(1.02)' },
+              },
+              shimmer: {
+                '0%': { backgroundPosition: '-200% 0' },
+                '100%': { backgroundPosition: '200% 0' },
+              },
+              celestialDrift: {
+                '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+                '33%': { transform: 'translate(3%, 4%) scale(1.08)' },
+                '66%': { transform: 'translate(-2%, 3%) scale(0.96)' },
+              },
+              starTwinkle: {
+                '0%, 100%': { opacity: '0.15', transform: 'scale(0.9)' },
+                '50%': { opacity: '0.9', transform: 'scale(1.2)' },
+              },
+              orbitSlow: {
+                'from': { transform: 'rotate(0deg)' },
+                'to': { transform: 'rotate(360deg)' },
+              },
+              glowSweep: {
+                '0%, 100%': { opacity: '0.3', transform: 'translateX(-50%) rotate(-45deg)' },
+                '50%': { opacity: '0.6', transform: 'translateX(50%) rotate(-45deg)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --color-bg-base: #020202;
+        --color-text-primary: #F8F8F8;
+        --color-text-secondary: #A1A1AA;
+        --font-main: 'Space Grotesk', sans-serif;
+        --gold-glow: 0 0 20px rgba(212, 175, 55, 0.2);
+      }
+
+      body {
+        background-color: var(--color-bg-base);
+        color: var(--color-text-primary);
+        font-family: var(--font-main);
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      /* Cosmic Gold 3D Card */
+      .neo-3d-card {
+        background: linear-gradient(145deg, rgba(20, 20, 25, 0.8), rgba(5, 5, 8, 0.95));
+        box-shadow: 
+          0 40px 100px rgba(0, 0, 0, 0.95),
+          0 0 40px rgba(212, 175, 55, 0.03),
+          inset 0 1px 1px rgba(255, 255, 255, 0.08),
+          inset 0 -1px 2px rgba(0, 0, 0, 0.8);
+        border: 1px solid rgba(212, 175, 55, 0.12);
+        backdrop-filter: blur(50px);
+        border-radius: 40px;
+        transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .neo-3d-card:hover {
+        border-color: rgba(212, 175, 55, 0.3);
+        box-shadow: 
+          0 60px 130px rgba(0, 0, 0, 1),
+          inset 0 1px 2px rgba(255, 255, 255, 0.15),
+          0 0 60px rgba(212, 175, 55, 0.08);
+      }
+
+      .hero-3d-title {
+        text-shadow: 
+          0 1px 0 #cccccc, 
+          0 2px 0 #c5c5c5, 
+          0 3px 0 #bbbbbb, 
+          0 4px 0 #b1b1b1, 
+          0 5px 0 #aaaaaa, 
+          0 6px 1px rgba(0,0,0,.1), 
+          0 0 5px rgba(0,0,0,.1), 
+          0 1px 3px rgba(0,0,0,.3), 
+          0 3px 5px rgba(0,0,0,.2), 
+          0 5px 10px rgba(0,0,0,.25), 
+          0 10px 10px rgba(0,0,0,.2), 
+          0 20px 20px rgba(0,0,0,.15);
+      }
+
+      /* Gold Inset Inputs with Dynamic Focus */
+      .neo-3d-input {
+        background: rgba(0, 0, 0, 0.8);
+        box-shadow: 
+          inset 0 4px 12px rgba(0, 0, 0, 0.9),
+          inset 0 -1px 1px rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(212, 175, 55, 0.08);
+        border-radius: 24px;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .neo-3d-input:focus {
+        background: rgba(5, 5, 8, 1);
+        border-color: rgba(212, 175, 55, 0.5);
+        box-shadow: 
+          inset 0 6px 16px rgba(0, 0, 0, 1),
+          0 0 0 1px rgba(212, 175, 55, 0.2),
+          0 0 30px rgba(212, 175, 55, 0.1);
+        transform: translateY(-2px);
+        outline: none;
+      }
+
+      .neo-3d-input:hover:not(:focus) {
+        border-color: rgba(212, 175, 55, 0.2);
+        background: rgba(10, 10, 12, 0.8);
+      }
+
+      /* Premium Gold Buttons with Dynamic Scaling and Glow */
+      .neo-3d-button {
+        background: linear-gradient(135deg, #1A1A1B, #000000);
+        box-shadow: 
+          0 10px 25px rgba(0, 0, 0, 0.8),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        border-radius: 20px;
+        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .neo-3d-button:hover {
+        transform: translateY(-4px) scale(1.02);
+        background: linear-gradient(135deg, #2A2A2D, #0A0A0C);
+        border-color: rgba(212, 175, 55, 0.6);
+        box-shadow: 
+          0 20px 40px rgba(0, 0, 0, 0.9),
+          0 0 25px rgba(212, 175, 55, 0.25);
+      }
+
+      .neo-3d-button:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
+        transition-duration: 0.1s;
+      }
+
+      .shimmer-text {
+        background: linear-gradient(90deg, #D4AF37 0%, #F9C82D 25%, #FFFFFF 50%, #F9C82D 75%, #D4AF37 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shimmer 8s infinite linear;
+      }
+
+      .script-font {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(212, 175, 55, 0.15);
+        border-radius: 10px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.3); }
+
+      .perspective-container {
+        perspective: 2500px;
+      }
+
+      .gold-ring {
+        border: 1px solid rgba(212, 175, 55, 0.1);
+        border-radius: 50%;
+        position: absolute;
+        pointer-events: none;
+      }
+
+      /* Glass Panel */
+      .glass-panel {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      /* Smooth focus for all interactive elements */
+      input, button, select, textarea {
+        transition: all 0.3s ease-in-out;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
