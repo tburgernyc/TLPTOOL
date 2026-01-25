@@ -54,5 +54,7 @@ export const flattenCardDatabase = () => {
   return flattened;
 };
 
+export const flatCardDatabase = flattenCardDatabase();
+
 // Generated canonical list of card names for random pulls and validation
-export const CANONICAL_TAROT_LIST = flattenCardDatabase().map(c => c.names[0]);
+export const CANONICAL_TAROT_LIST = flatCardDatabase.map(c => c.names[0]);

@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { TarotCard, Spread, SpreadPreset } from './types';
 import { RotateCw, Search, CheckCircle2, AlertCircle, Mic, MicOff, Save, FolderOpen, Trash2, Layout } from 'lucide-react';
-import { flattenCardDatabase } from './tarotCardDatabase';
+import { flatCardDatabase } from './tarotCardDatabase';
 import { findCardMatch, parseCardFromSpeech } from './cardMatcher';
 import { useSpeechRecognition } from './useSpeechRecognition';
 
@@ -41,7 +41,6 @@ const CardInput: React.FC<CardInputProps> = ({
   label,
   onUpdate
 }) => {
-  const flatDb = useMemo(() => flattenCardDatabase(), []);
   const [isFocused, setIsFocused] = useState(false);
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [matchResult, setMatchResult] = useState<any>(null);
@@ -52,7 +51,7 @@ const CardInput: React.FC<CardInputProps> = ({
     if (isRecognizing && isListening) {
       const fullText = (transcript + ' ' + interimTranscript).trim();
       if (fullText) {
-        const result = parseCardFromSpeech(fullText, flatDb);
+        const result = parseCardFromSpeech(fullText, flatCardDatabase);
         setMatchResult(result);
         if (result.success && result.card) {
           onUpdate(section, index, { 
@@ -65,7 +64,7 @@ const CardInput: React.FC<CardInputProps> = ({
         }
       }
     }
-  }, [transcript, interimTranscript, isRecognizing, isListening, flatDb, onUpdate, section, index]);
+  }, [transcript, interimTranscript, isRecognizing, isListening, onUpdate, section, index]);
 
   const handleStartMic = () => {
     setIsRecognizing(true);
@@ -80,12 +79,12 @@ const CardInput: React.FC<CardInputProps> = ({
 
   const validation = useMemo(() => {
     if (!card.name.trim()) return { status: 'empty', match: null };
-    const match = findCardMatch(card.name, flatDb);
+    const match = findCardMatch(card.name, flatCardDatabase);
     if (match.card && match.confidence >= 80) {
       return { status: 'valid', match: match.card };
     }
     return { status: 'invalid', match: null };
-  }, [card.name, flatDb]);
+  }, [card.name]);
 
   const getConfidenceColor = (cat?: string) => {
     if (cat === 'High') return 'text-emerald-500';
