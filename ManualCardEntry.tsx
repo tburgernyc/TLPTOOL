@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef, memo } from 'react';
 import { TarotCard, Spread, SpreadPreset } from './types';
 import { RotateCw, Search, CheckCircle2, AlertCircle, Mic, MicOff, Save, FolderOpen, Trash2, Layout } from 'lucide-react';
-import { flatCardDatabase } from './tarotCardDatabase';
-import { findCardMatch, parseCardFromSpeech } from './cardMatcher';
+import { flatCardDatabase, flattenCardDatabase } from './tarotCardDatabase';
+import { findCardMatch, parseCardFromSpeech, DIGIT_TO_NAME_MAP } from './cardMatcher';
 import { useSpeechRecognition } from './useSpeechRecognition';
+import { useDebounce } from './useDebounce';
 
 interface ManualCardEntryProps {
   spread: Spread;
@@ -18,15 +19,10 @@ interface CardInputProps {
   onUpdate: (section: keyof Spread, index: number | null, updates: Partial<TarotCard>) => void;
 }
 
-const DIGIT_MAP: { [key: string]: string } = {
-  '1': 'Ace', '2': 'Two', '3': 'Three', '4': 'Four', '5': 'Five',
-  '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten'
-};
-
-const DIGIT_REGEX = new RegExp(`\\b(${Object.keys(DIGIT_MAP).sort((a, b) => b.length - a.length).join('|')})\\b`, 'g');
+const DIGIT_REGEX = new RegExp(`\\b(${Object.keys(DIGIT_TO_NAME_MAP).sort((a, b) => b.length - a.length).join('|')})\\b`, 'g');
 
 const digitToWord = (text: string): string => {
-  return text.replace(DIGIT_REGEX, (match) => DIGIT_MAP[match]);
+  return text.replace(DIGIT_REGEX, (match) => DIGIT_TO_NAME_MAP[match]);
 };
 
 const CardInput: React.FC<CardInputProps> = memo(({
@@ -42,11 +38,14 @@ const CardInput: React.FC<CardInputProps> = memo(({
   
   const { isListening, transcript, interimTranscript, start, stop } = useSpeechRecognition();
 
+  // Combine transcripts and debounce to prevent expensive parsing on every character/frame
+  const fullText = (transcript + ' ' + interimTranscript).trim();
+  const debouncedText = useDebounce(fullText, 300);
+
   useEffect(() => {
     if (isRecognizing && isListening) {
-      const fullText = (transcript + ' ' + interimTranscript).trim();
-      if (fullText) {
-        const result = parseCardFromSpeech(fullText, flatCardDatabase);
+      if (debouncedText) {
+        const result = parseCardFromSpeech(debouncedText, flatCardDatabase);
         setMatchResult(result);
         if (result.success && result.card) {
           onUpdate(section, index, { 
@@ -59,7 +58,7 @@ const CardInput: React.FC<CardInputProps> = memo(({
         }
       }
     }
-  }, [transcript, interimTranscript, isRecognizing, isListening, onUpdate, section, index]);
+  }, [debouncedText, isRecognizing, isListening, onUpdate, section, index]);
 
   const handleStartMic = () => {
     setIsRecognizing(true);
@@ -193,6 +192,7 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
     spreadRef.current = spread;
   }, [spread]);
 
+  const flatDb = flatCardDatabase;
   const [presets, setPresets] = useState<SpreadPreset[]>([]);
   const [newPresetName, setNewPresetName] = useState('');
   const [showPresets, setShowPresets] = useState(false);
