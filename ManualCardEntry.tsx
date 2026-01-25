@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef, memo } from 'react';
 import { TarotCard, Spread, SpreadPreset } from './types';
 import { RotateCw, Search, CheckCircle2, AlertCircle, Mic, MicOff, Save, FolderOpen, Trash2, Layout } from 'lucide-react';
 import { flatCardDatabase } from './tarotCardDatabase';
@@ -16,7 +16,6 @@ interface CardInputProps {
   card: TarotCard;
   label: string;
   onUpdate: (section: keyof Spread, index: number | null, updates: Partial<TarotCard>) => void;
-  flatDb: any[];
 }
 
 const DIGIT_MAP: { [key: string]: string } = {
@@ -30,13 +29,12 @@ const digitToWord = (text: string): string => {
   return text.replace(DIGIT_REGEX, (match) => DIGIT_MAP[match]);
 };
 
-const CardInput: React.FC<CardInputProps> = ({ 
+const CardInput: React.FC<CardInputProps> = memo(({
   section, 
   index, 
   card, 
   label,
-  onUpdate,
-  flatDb
+  onUpdate
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isRecognizing, setIsRecognizing] = useState(false);
@@ -187,10 +185,14 @@ const CardInput: React.FC<CardInputProps> = ({
       </div>
     </div>
   );
-};
+});
 
 const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) => {
-  const flatDb = useMemo(() => flattenCardDatabase(), []);
+  const spreadRef = useRef(spread);
+  useEffect(() => {
+    spreadRef.current = spread;
+  }, [spread]);
+
   const [presets, setPresets] = useState<SpreadPreset[]>([]);
   const [newPresetName, setNewPresetName] = useState('');
   const [showPresets, setShowPresets] = useState(false);
@@ -222,7 +224,7 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
     index: number | null,
     updates: Partial<TarotCard>
   ) => {
-    const newSpread = { ...spread };
+    const newSpread = { ...spreadRef.current };
     if (section === 'bottom') {
       newSpread.bottom = { ...newSpread.bottom, ...updates };
     } else {
@@ -233,7 +235,7 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
       }
     }
     onChange(newSpread);
-  }, [spread, onChange]);
+  }, [onChange]); // Removed spread dependency
 
   const SectionHeader = ({ label, colorClass = "bg-taupe-accent" }: { label: string, colorClass?: string }) => (
     <div className="flex items-center gap-4 px-2 mb-10 group">
@@ -299,7 +301,6 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
                   card={c}
                   label={`NODE 0${i+1}`}
                   onUpdate={updateCard}
-                  flatDb={flatDb}
                 />
               ))}
             </div>
@@ -315,7 +316,6 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
             card={spread.bottom}
             label="SHADOW BASE"
             onUpdate={updateCard}
-            flatDb={flatDb}
           />
         </div>
       </div>
