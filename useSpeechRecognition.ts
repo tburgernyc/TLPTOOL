@@ -13,6 +13,7 @@ interface UseSpeechRecognitionReturn {
 
 export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
   const [isListening, setIsListening] = useState(false);
+  const isListeningRef = useRef(false);
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [volume, setVolume] = useState(0);
@@ -44,7 +45,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
       const dataArray = new Uint8Array(bufferLength);
 
       const updateVolume = () => {
-        if (!analyserRef.current || !isListening) {
+        if (!analyserRef.current || !isListeningRef.current) {
           setVolume(0);
           return;
         }
@@ -55,7 +56,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
         }
         const average = sum / bufferLength;
         setVolume(Math.min(average * 2.5, 100)); // Normalized
-        if (isListening) requestAnimationFrame(updateVolume);
+        if (isListeningRef.current) requestAnimationFrame(updateVolume);
       };
       
       updateVolume();
@@ -86,6 +87,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
       } catch (e) {}
     }
     setIsListening(false);
+    isListeningRef.current = false;
     stopVolumeAnalysis();
   }, []);
 
@@ -116,6 +118,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
 
     recognition.onstart = () => {
       setIsListening(true);
+      isListeningRef.current = true;
       setError(null);
       startVolumeAnalysis();
     };
@@ -146,6 +149,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
         setError('Microphone access denied. Please check site permissions.');
         shouldRestartRef.current = false;
         setIsListening(false);
+        isListeningRef.current = false;
         stopVolumeAnalysis();
       } else {
         setError(`System encountered a speech error: ${event.error}`);
@@ -162,12 +166,14 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
             } catch (e) {
               console.warn('Auto-restart failed', e);
               setIsListening(false);
+              isListeningRef.current = false;
               stopVolumeAnalysis();
             }
           }
         }, 300);
       } else {
         setIsListening(false);
+        isListeningRef.current = false;
         stopVolumeAnalysis();
       }
     };
@@ -178,6 +184,11 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
       setError('Failed to initiate microphone protocol.');
     }
   }, []);
+
+  useEffect(() => {
+    // Sync ref with state for completeness
+    isListeningRef.current = isListening;
+  }, [isListening]);
 
   useEffect(() => {
     return () => {
