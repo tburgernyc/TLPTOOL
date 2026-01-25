@@ -38,9 +38,8 @@ describe('ManualCardEntry Performance', () => {
 
     render(<ManualCardEntry spread={mockSpread} onChange={() => {}} />);
 
-    // ManualCardEntry calls it once. CardInputs receive it as prop.
-    // So we expect exactly 1 call.
-    expect(spy.mock.calls.length).toBe(1);
+    // ManualCardEntry uses the exported singleton, so it shouldn't call flattenCardDatabase again.
+    expect(spy.mock.calls.length).toBe(0);
     console.log(`flattenCardDatabase called ${spy.mock.calls.length} times during render.`);
   });
 
