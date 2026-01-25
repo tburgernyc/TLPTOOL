@@ -43,6 +43,23 @@ const PHONETIC_MAP: Record<string, string> = {
 
 const PHONETIC_REGEX = /pentacles|wands|cups|swords|ph|ce|ci|cy|kn|wr|gh/g;
 
+const CARD_VALUES = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'page', 'knight', 'queen', 'king', 'knave', 'prince', 'princess'];
+
+const WAND_SYNONYMS = new Set(['wand', 'rods', 'rod', 'staves', 'staff', 'baton']);
+const PENTACLE_SYNONYMS = new Set(['pentacle', 'coins', 'coin', 'disks', 'disk', 'stones', 'stone', 'diamonds', 'diamond']);
+const CUP_SYNONYMS = new Set(['cup', 'chalice', 'vessel', 'hearts', 'heart']);
+const SWORD_SYNONYMS = new Set(['sword', 'blade', 'spades', 'spade']);
+
+const SUIT_SYNONYMS_MAP: Record<string, Set<string>> = {
+  wands: WAND_SYNONYMS,
+  pentacles: PENTACLE_SYNONYMS,
+  cups: CUP_SYNONYMS,
+  swords: SWORD_SYNONYMS
+};
+
+const PAGE_SYNONYMS = new Set(['knave', 'princess']);
+const KNIGHT_SYNONYMS = new Set(['prince']);
+
 /**
  * Normalizes text for phonetic/structural comparison.
  */
@@ -155,24 +172,8 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
     
     // 2. Component-based Scoring for Minor Arcana
     if (card.suit) {
-      const values = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'page', 'knight', 'queen', 'king', 'knave', 'prince', 'princess'];
-      const cardValue = values[card.number - 1];
+      const cardValue = CARD_VALUES[card.number - 1];
       
-      let suitScore = 0;
-      for (const token of tokens) {
-        // Expand matching for synonyms
-        const isWand = card.suit === 'wands' && ['wand', 'rods', 'rod', 'staves', 'staff', 'baton'].includes(token);
-        const isPentacle = card.suit === 'pentacles' && ['pentacle', 'coins', 'coin', 'disks', 'disk', 'stones', 'stone', 'diamonds', 'diamond'].includes(token);
-        const isCup = card.suit === 'cups' && ['cup', 'chalice', 'vessel', 'hearts', 'heart'].includes(token);
-        const isSword = card.suit === 'swords' && ['sword', 'blade', 'spades', 'spade'].includes(token);
-
-        if (token === card.suit || isWand || isPentacle || isCup || isSword) {
-          suitScore = 1;
-          break;
-        }
-        suitScore = Math.max(suitScore, jaroWinkler(token, card.suit));
-      }
-
       let valueScore = 0;
       for (const token of tokens) {
         // Check standard value
@@ -181,13 +182,27 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
           break;
         }
         // Handle common variations (Page/Knave, Knight/Prince)
-        const isPage = cardValue === 'page' && ['knave', 'princess'].includes(token);
-        const isKnight = cardValue === 'knight' && ['prince'].includes(token);
+        const isPage = cardValue === 'page' && PAGE_SYNONYMS.has(token);
+        const isKnight = cardValue === 'knight' && KNIGHT_SYNONYMS.has(token);
         if (isPage || isKnight) {
           valueScore = 0.95;
           break;
         }
         valueScore = Math.max(valueScore, jaroWinkler(token, cardValue));
+      }
+
+      let suitScore = 0;
+      // Optimization: Only check suit if value matches sufficiently (1/14 selectivity vs 1/4)
+      if (valueScore > 0.65) {
+        const suitSynonyms = SUIT_SYNONYMS_MAP[card.suit];
+
+        for (const token of tokens) {
+          if (token === card.suit || (suitSynonyms && suitSynonyms.has(token))) {
+            suitScore = 1;
+            break;
+          }
+          suitScore = Math.max(suitScore, jaroWinkler(token, card.suit));
+        }
       }
 
       if (suitScore > 0.65 && valueScore > 0.65) {
