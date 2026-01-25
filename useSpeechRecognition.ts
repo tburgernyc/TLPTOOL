@@ -11,7 +11,13 @@ interface UseSpeechRecognitionReturn {
   error: string | null;
 }
 
-export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
+interface UseSpeechRecognitionOptions {
+  enableVolumeMeter?: boolean;
+}
+
+export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}): UseSpeechRecognitionReturn => {
+  const { enableVolumeMeter = true } = options;
+
   const [isListening, setIsListening] = useState(false);
   const isListeningRef = useRef(false);
   const [transcript, setTranscript] = useState('');
@@ -27,6 +33,8 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
   const restartTimeoutRef = useRef<number | null>(null);
 
   const startVolumeAnalysis = async () => {
+    if (!enableVolumeMeter) return;
+
     try {
       if (audioContextRef.current) return;
       
@@ -44,18 +52,27 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
+      let lastVolumeUpdate = 0;
+      const VOLUME_THROTTLE_MS = 50;
+
       const updateVolume = () => {
         if (!analyserRef.current || !isListeningRef.current) {
           setVolume(0);
           return;
         }
-        analyserRef.current.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
+
+        const now = Date.now();
+        if (now - lastVolumeUpdate > VOLUME_THROTTLE_MS) {
+          analyserRef.current.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / bufferLength;
+          setVolume(Math.min(average * 2.5, 100)); // Normalized
+          lastVolumeUpdate = now;
         }
-        const average = sum / bufferLength;
-        setVolume(Math.min(average * 2.5, 100)); // Normalized
+
         if (isListeningRef.current) requestAnimationFrame(updateVolume);
       };
       

@@ -36,7 +36,7 @@ const CardInput: React.FC<CardInputProps> = memo(({
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [matchResult, setMatchResult] = useState<any>(null);
   
-  const { isListening, transcript, interimTranscript, start, stop } = useSpeechRecognition();
+  const { isListening, transcript, interimTranscript, start, stop } = useSpeechRecognition({ enableVolumeMeter: false });
 
   const isSpeechSupported = typeof window !== 'undefined' && !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
