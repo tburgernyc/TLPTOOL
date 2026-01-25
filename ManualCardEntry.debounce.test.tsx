@@ -29,6 +29,12 @@ describe('ManualCardEntry Debounce Verification', () => {
   };
 
   beforeEach(() => {
+    // Mock SpeechRecognition to ensure mic button is enabled
+    Object.defineProperty(window, 'SpeechRecognition', {
+      writable: true,
+      value: vi.fn(),
+    });
+
     vi.useFakeTimers();
     vi.clearAllMocks();
     mockHookState = {
