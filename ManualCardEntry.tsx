@@ -38,6 +38,8 @@ const CardInput: React.FC<CardInputProps> = memo(({
   
   const { isListening, transcript, interimTranscript, start, stop } = useSpeechRecognition();
 
+  const isSpeechSupported = typeof window !== 'undefined' && !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
   // Combine transcripts and debounce to prevent expensive parsing on every character/frame
   const fullText = (transcript + ' ' + interimTranscript).trim();
   const debouncedText = useDebounce(fullText, 300);
@@ -136,10 +138,14 @@ const CardInput: React.FC<CardInputProps> = memo(({
             <button
               type="button"
               onClick={isRecognizing ? handleStopMic : handleStartMic}
+              disabled={!isSpeechSupported}
+              title={!isSpeechSupported ? "Voice input requires Chrome/Safari" : "Toggle voice input"}
               className={`p-2 rounded-lg transition-all duration-300 ${
-                isRecognizing 
-                  ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse' 
-                  : 'text-slate-700 hover:text-taupe-accent hover:bg-white/5'
+                !isSpeechSupported
+                  ? 'opacity-30 cursor-not-allowed text-slate-500'
+                  : isRecognizing
+                    ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse'
+                    : 'text-slate-700 hover:text-taupe-accent hover:bg-white/5'
               }`}
             >
               {isRecognizing ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
