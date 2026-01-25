@@ -73,24 +73,29 @@ function normalizeNumericTerms(text: string): string {
   });
 }
 
+const PHONETIC_MAP: Record<string, string> = {
+  'pentacles': 'pent',
+  'wands': 'wand',
+  'cups': 'cup',
+  'swords': 'sword',
+  'ph': 'f',
+  'ce': 'se',
+  'ci': 'si',
+  'cy': 'si',
+  'kn': 'n',
+  'wr': 'r',
+  'gh': ''
+};
+
+const PHONETIC_REGEX = /pentacles|wands|cups|swords|ph|ce|ci|cy|kn|wr|gh/g;
+
 /**
  * Normalizes text for phonetic/structural comparison.
  */
 export function phoneticNormalize(text: string): string {
   let normalized = text.toLowerCase().trim()
     .replace(/[^a-z0-9]/g, '')
-    .replace(/ph/g, 'f')
-    .replace(/ce/g, 'se')
-    .replace(/ci/g, 'si')
-    .replace(/cy/g, 'si')
-    .replace(/kn/g, 'n')
-    .replace(/wr/g, 'r')
-    .replace(/gh/g, '')
-    // Handle specific tarot speech issues
-    .replace(/pentacles/g, 'pent')
-    .replace(/wands/g, 'wand')
-    .replace(/cups/g, 'cup')
-    .replace(/swords/g, 'sword')
+    .replace(PHONETIC_REGEX, (match) => PHONETIC_MAP[match])
     .replace(/([a-z])\1+/g, '$1');
 
   if (normalized.length > 1) {
