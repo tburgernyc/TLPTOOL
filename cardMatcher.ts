@@ -60,19 +60,20 @@ export function phoneticNormalize(text: string): string {
   return normalized;
 }
 
+const REVERSED_KEYWORDS = ['reversed', 'reverse', 'inverted', 'upside down', 'backwards', 'flipped'];
+const UPRIGHT_KEYWORDS = ['upright', 'up right', 'standing', 'normal', 'standard', 'stable'];
+
 export const extractCardPosition = (spokenText: string): 'Upright' | 'Reversed' => {
   const text = spokenText.toLowerCase();
-  const reversedKeywords = ['reversed', 'reverse', 'inverted', 'upside down', 'backwards', 'flipped'];
-  const uprightKeywords = ['upright', 'up right', 'standing', 'normal', 'standard', 'stable'];
 
   let lastReversedIdx = -1;
-  reversedKeywords.forEach(kw => {
+  REVERSED_KEYWORDS.forEach(kw => {
     const idx = text.lastIndexOf(kw);
     if (idx > lastReversedIdx) lastReversedIdx = idx;
   });
 
   let lastUprightIdx = -1;
-  uprightKeywords.forEach(kw => {
+  UPRIGHT_KEYWORDS.forEach(kw => {
     const idx = text.lastIndexOf(kw);
     if (idx > lastUprightIdx) lastUprightIdx = idx;
   });
