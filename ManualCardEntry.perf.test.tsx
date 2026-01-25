@@ -32,13 +32,14 @@ describe('ManualCardEntry Performance', () => {
     vi.clearAllMocks();
   });
 
-  it('calls flattenCardDatabase once (Optimized behavior)', () => {
+  it('calls flattenCardDatabase zero times (Optimized behavior)', () => {
     // We spy on the real implementation
     const spy = vi.spyOn(dbModule, 'flattenCardDatabase');
 
     render(<ManualCardEntry spread={mockSpread} onChange={() => {}} />);
 
     // ManualCardEntry uses the exported singleton, so it shouldn't call flattenCardDatabase again.
+    // ManualCardEntry should use the singleton flatCardDatabase and NOT call flattenCardDatabase()
     expect(spy.mock.calls.length).toBe(0);
     console.log(`flattenCardDatabase called ${spy.mock.calls.length} times during render.`);
   });
