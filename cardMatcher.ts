@@ -122,6 +122,45 @@ export const extractCardPosition = (spokenText: string): 'Upright' | 'Reversed' 
   return 'Upright';
 };
 
+// Cache for search indices to avoid rebuilding on every call if db is same
+const searchIndexCache = new WeakMap<any[], SearchIndex>();
+
+interface SearchIndex {
+  exactMap: Map<string, any>;
+  phoneticMap: Map<string, any>;
+}
+
+function getSearchIndex(flatDatabase: any[]): SearchIndex {
+  if (searchIndexCache.has(flatDatabase)) {
+    return searchIndexCache.get(flatDatabase)!;
+  }
+
+  const exactMap = new Map<string, any>();
+  const phoneticMap = new Map<string, any>();
+
+  for (const card of flatDatabase) {
+    // Populate exact map
+    for (const name of card.names) {
+        const key = name.toLowerCase();
+        if (!exactMap.has(key)) {
+            exactMap.set(key, card);
+        }
+    }
+    // Populate phonetic map
+    const pNames = card.phoneticNames || card.names.map((n: string) => phoneticNormalize(n));
+    for (const pName of pNames) {
+        // If duplicates exist, we keep the first one found in the database order.
+        if (!phoneticMap.has(pName)) {
+            phoneticMap.set(pName, card);
+        }
+    }
+  }
+
+  const index = { exactMap, phoneticMap };
+  searchIndexCache.set(flatDatabase, index);
+  return index;
+}
+
 /**
  * Matches spoken text to a card using a weighted scoring system.
  */
@@ -132,21 +171,31 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
   
   if (!cleanText) return { card: null, confidence: 0, tier: 'None' };
 
-  let bestMatch = { card: null, confidence: 0, tier: 'None' };
+  // Optimization: Use pre-built indices for O(1) lookups
+  const { exactMap, phoneticMap } = getSearchIndex(flatDatabase);
+
+  // 1. Exact Match on any name/alias (O(1))
+  if (exactMap.has(cleanText)) {
+    return { card: exactMap.get(cleanText), confidence: 100, tier: 'Exact' };
+  }
+
+  let bestMatch: { card: any, confidence: number, tier: string } = { card: null, confidence: 0, tier: 'None' };
+
+  // 2. Phonetic Match (O(1))
+  if (phoneticMap.has(phoneticText)) {
+    bestMatch = { card: phoneticMap.get(phoneticText), confidence: 88, tier: 'Phonetic' };
+  }
+
   const tokens = cleanText.split(/\s+/);
 
   for (const card of flatDatabase) {
     let currentScore = 0;
     let currentTier = 'None';
 
-    // 1. Exact Match on any name/alias
-    if (card.names.some((name: string) => name.toLowerCase() === cleanText)) {
-      currentScore = 100;
-      currentTier = 'Exact';
-    } 
+    // 1. Exact Match - SKIPPED (already handled)
     
     // 2. Component-based Scoring for Minor Arcana
-    if (currentScore < 100 && card.suit) {
+    if (card.suit) {
       const values = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'page', 'knight', 'queen', 'king', 'knave', 'prince', 'princess'];
       const cardValue = values[card.number - 1];
       
@@ -191,25 +240,20 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
       }
     }
 
-    // 3. Phonetic Match
-    if (currentScore < 85) {
-      const pNames = card.phoneticNames || card.names.map((n: string) => phoneticNormalize(n));
-      if (pNames.includes(phoneticText)) {
-        currentScore = 88;
-        currentTier = 'Phonetic';
-      }
-    }
+    // 3. Phonetic Match - SKIPPED (already handled by global lookup)
+    // The global lookup finds the first match. Iterating again won't improve score (88).
 
     // 4. Global Fuzzy Match across all aliases
+    // We only need to check this if we can beat current best score.
+    // If current best is 88 (Phonetic), we need fuzzy > 88.
+    // If current best is Component (e.g. 95), we need fuzzy > 95.
+
+    // Check if it's worth checking fuzzy match
+    // Fuzzy match can yield up to 100 (if exact, but exact handled).
+    // So theoretically fuzzy match is needed.
     if (currentScore < 95) {
-      // Use pre-normalized names for performance
       const targetNames = card.normalizedNames || card.names;
       for (const name of targetNames) {
-        // cleanText is already normalized (lower + trim)
-        // name is either from normalizedNames (lower) or raw names (mixed case) if DB not updated
-        // For safety/fallback if normalizedNames missing, we could lowercase on fly, but assuming DB update.
-        // If DB update failed, jaroWinkler might behave worse due to case mismatch.
-        // But we updated DB.
         const fuzzyScore = jaroWinkler(cleanText, name) * 100;
         if (fuzzyScore > currentScore && fuzzyScore >= 55) {
           currentScore = fuzzyScore;
