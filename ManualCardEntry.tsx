@@ -36,7 +36,7 @@ const CardInput: React.FC<CardInputProps> = memo(({
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [matchResult, setMatchResult] = useState<any>(null);
   
-  const { isListening, transcript, interimTranscript, start, stop } = useSpeechRecognition();
+  const { isListening, transcript, interimTranscript, start, stop } = useSpeechRecognition({ enableVolumeMeter: false });
 
   // Combine transcripts and debounce to prevent expensive parsing on every character/frame
   const fullText = (transcript + ' ' + interimTranscript).trim();
