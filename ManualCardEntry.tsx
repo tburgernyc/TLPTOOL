@@ -4,6 +4,7 @@ import { RotateCw, Search, CheckCircle2, AlertCircle, Mic, MicOff, Save, FolderO
 import { flatCardDatabase } from './tarotCardDatabase';
 import { findCardMatch, parseCardFromSpeech } from './cardMatcher';
 import { useSpeechRecognition } from './useSpeechRecognition';
+import { useDebounce } from './useDebounce';
 
 interface ManualCardEntryProps {
   spread: Spread;
@@ -44,11 +45,14 @@ const CardInput: React.FC<CardInputProps> = ({
   
   const { isListening, transcript, interimTranscript, start, stop } = useSpeechRecognition();
 
+  // Combine transcripts and debounce to prevent expensive parsing on every character/frame
+  const fullText = (transcript + ' ' + interimTranscript).trim();
+  const debouncedText = useDebounce(fullText, 300);
+
   useEffect(() => {
     if (isRecognizing && isListening) {
-      const fullText = (transcript + ' ' + interimTranscript).trim();
-      if (fullText) {
-        const result = parseCardFromSpeech(fullText, flatCardDatabase);
+      if (debouncedText) {
+        const result = parseCardFromSpeech(debouncedText, flatCardDatabase);
         setMatchResult(result);
         if (result.success && result.card) {
           onUpdate(section, index, { 
@@ -61,7 +65,7 @@ const CardInput: React.FC<CardInputProps> = ({
         }
       }
     }
-  }, [transcript, interimTranscript, isRecognizing, isListening, onUpdate, section, index]);
+  }, [debouncedText, isRecognizing, isListening, onUpdate, section, index]);
 
   const handleStartMic = () => {
     setIsRecognizing(true);
@@ -190,7 +194,7 @@ const CardInput: React.FC<CardInputProps> = ({
 };
 
 const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) => {
-  const flatDb = useMemo(() => flattenCardDatabase(), []);
+  const flatDb = flatCardDatabase;
   const [presets, setPresets] = useState<SpreadPreset[]>([]);
   const [newPresetName, setNewPresetName] = useState('');
   const [showPresets, setShowPresets] = useState(false);
