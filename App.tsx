@@ -77,7 +77,12 @@ const App: React.FC = () => {
 
         let audioData: string | undefined;
         if (params.includeAudio) {
-          try { audioData = await generateSpeech(fullScript); } catch (e) { console.warn("TTS skipped"); }
+          try {
+            audioData = await generateSpeech(fullScript);
+          } catch (e) {
+            console.warn("TTS skipped", e);
+            showToast('Audio synthesis failed. Text-only mode active.', 'TTS_WARN', 'warning');
+          }
         }
 
         const reading: GeneratedReading = {
