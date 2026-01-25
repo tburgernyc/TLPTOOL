@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { flattenCardDatabase } from './tarotCardDatabase';
+import React, { useState, useCallback, useEffect } from 'react';
+import { flatCardDatabase } from './tarotCardDatabase';
 import { parseCardFromSpeech } from './cardMatcher';
 import { Check, X, Target, Activity } from 'lucide-react';
 
@@ -40,8 +40,6 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
 }) => {
   const [listeningStatus, setListeningStatus] = useState('');
   
-  const flatDatabase = useMemo(() => flattenCardDatabase(), []);
-
   // Use a local "session transcript" to detect new matches within one card capture cycle
   const [lastProcessedTranscript, setLastProcessedTranscript] = useState('');
 
@@ -53,7 +51,7 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
       if (fullText && fullText !== lastProcessedTranscript) {
         const timeoutId = setTimeout(() => {
           setListeningStatus('Scanning...');
-          const parsed = parseCardFromSpeech(fullText, flatDatabase);
+          const parsed = parseCardFromSpeech(fullText, flatCardDatabase);
 
           if (parsed.success) {
             setPendingCard(parsed);
@@ -67,7 +65,7 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
         setListeningStatus('Awaiting Node...');
       }
     }
-  }, [transcript, interimTranscript, isListening, flatDatabase, pendingCard, lastProcessedTranscript, setPendingCard]);
+  }, [transcript, interimTranscript, isListening, pendingCard, lastProcessedTranscript, setPendingCard]);
 
   const handleConfirm = useCallback(() => {
     if (pendingCard) {
