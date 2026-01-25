@@ -198,7 +198,13 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
   };
 
   useEffect(() => {
-    return () => stopAudio();
+    return () => {
+      stopAudio();
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+    };
   }, []);
 
   const formatTime = (time: number) => {
