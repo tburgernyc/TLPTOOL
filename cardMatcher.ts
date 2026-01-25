@@ -76,7 +76,7 @@ function normalizeNumericTerms(text: string): string {
 /**
  * Normalizes text for phonetic/structural comparison.
  */
-function phoneticNormalize(text: string): string {
+export function phoneticNormalize(text: string): string {
   let normalized = text.toLowerCase().trim()
     .replace(/[^a-z0-9]/g, '')
     .replace(/ph/g, 'f')
@@ -193,7 +193,8 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
 
     // 3. Phonetic Match
     if (currentScore < 85) {
-      if (card.names.some((name: string) => phoneticNormalize(name) === phoneticText)) {
+      const pNames = card.phoneticNames || card.names.map((n: string) => phoneticNormalize(n));
+      if (pNames.includes(phoneticText)) {
         currentScore = 88;
         currentTier = 'Phonetic';
       }
