@@ -133,6 +133,7 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
   if (!cleanText) return { card: null, confidence: 0, tier: 'None' };
 
   let bestMatch = { card: null, confidence: 0, tier: 'None' };
+  const tokens = cleanText.split(/\s+/);
 
   for (const card of flatDatabase) {
     let currentScore = 0;
@@ -148,7 +149,6 @@ export const findCardMatch = (spokenText: string, flatDatabase: any[]) => {
     if (currentScore < 100 && card.suit) {
       const values = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'page', 'knight', 'queen', 'king', 'knave', 'prince', 'princess'];
       const cardValue = values[card.number - 1];
-      const tokens = cleanText.split(/\s+/);
       
       let suitScore = 0;
       for (const token of tokens) {
