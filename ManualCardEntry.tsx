@@ -71,14 +71,16 @@ const CardInput: React.FC<CardInputProps> = memo(({
     stop();
   };
 
+  const debouncedCardName = useDebounce(card.name, 300);
+
   const validation = useMemo(() => {
-    if (!card.name.trim()) return { status: 'empty', match: null };
-    const match = findCardMatch(card.name, flatCardDatabase);
+    if (!debouncedCardName.trim()) return { status: 'empty', match: null };
+    const match = findCardMatch(debouncedCardName, flatCardDatabase);
     if (match.card && match.confidence >= 80) {
       return { status: 'valid', match: match.card };
     }
     return { status: 'invalid', match: null };
-  }, [card.name]);
+  }, [debouncedCardName]);
 
   const getConfidenceColor = (cat?: string) => {
     if (cat === 'High') return 'text-emerald-500';
