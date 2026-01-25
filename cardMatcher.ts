@@ -1,66 +1,20 @@
-/**
- * Jaro-Winkler similarity algorithm for better phonetic/string matching.
- * Returns a value between 0 and 1.
- */
-function jaroWinkler(s1: string, s2: string): number {
-  if (s1.length === 0 || s2.length === 0) return 0;
-  // Optimization: Inputs are expected to be pre-normalized (lowercase/trimmed)
-  if (s1 === s2) return 1;
+import { jaroWinkler } from './utils';
 
-  const range = Math.floor(Math.max(s1.length, s2.length) / 2) - 1;
-  const s1Matches = new Array(s1.length).fill(false);
-  const s2Matches = new Array(s2.length).fill(false);
-
-  let m = 0;
-  for (let i = 0; i < s1.length; i++) {
-    const low = Math.max(0, i - range);
-    const high = Math.min(i + range + 1, s2.length);
-    for (let j = low; j < high; j++) {
-      if (!s2Matches[j] && s1[i] === s2[j]) {
-        s1Matches[i] = true;
-        s2Matches[j] = true;
-        m++;
-        break;
-      }
-    }
-  }
-
-  if (m === 0) return 0;
-
-  let k = 0;
-  let t = 0;
-  for (let i = 0; i < s1.length; i++) {
-    if (s1Matches[i]) {
-      while (!s2Matches[k]) k++;
-      if (s1[i] !== s2[k]) t++;
-      k++;
-    }
-  }
-
-  const jaro = (m / s1.length + m / s2.length + (m - t / 2) / m) / 3;
-  const p = 0.1; // Scaling factor
-  let l = 0; // Prefix length
-  for (let i = 0; i < Math.min(4, s1.length, s2.length); i++) {
-    if (s1[i] === s2[i]) l++;
-    else break;
-  }
-
-  return jaro + l * p * (1 - jaro);
-}
+export const DIGIT_TO_NAME_MAP: { [key: string]: string } = {
+  '1': 'Ace', '2': 'Two', '3': 'Three', '4': 'Four', '5': 'Five',
+  '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten',
+  '0': 'Zero'
+};
 
 const NUMERIC_MAP: { [key: string]: string } = {
-  '1': 'ace', 'one': 'ace',
-  '2': 'two', 'too': 'two', 'to': 'two',
-  '3': 'three', 'free': 'three',
-  '4': 'four', 'for': 'four',
-  '5': 'five',
-  '6': 'six',
-  '7': 'seven',
-  '8': 'eight', 'ate': 'eight',
-  '9': 'nine',
-  '10': 'ten',
-  '0': 'zero'
+  ...Object.entries(DIGIT_TO_NAME_MAP).reduce((acc, [k, v]) => ({ ...acc, [k]: v.toLowerCase() }), {} as Record<string, string>),
+  'one': 'ace',
+  'too': 'two', 'to': 'two',
+  'free': 'three',
+  'for': 'four',
+  'ate': 'eight'
 };
+
 const NUMERIC_KEYS = Object.keys(NUMERIC_MAP).sort((a, b) => b.length - a.length);
 const NUMERIC_REGEX = new RegExp(`\\b(${NUMERIC_KEYS.join('|')})\\b`, 'g');
 
@@ -73,24 +27,29 @@ function normalizeNumericTerms(text: string): string {
   });
 }
 
+const PHONETIC_MAP: Record<string, string> = {
+  'pentacles': 'pent',
+  'wands': 'wand',
+  'cups': 'cup',
+  'swords': 'sword',
+  'ph': 'f',
+  'ce': 'se',
+  'ci': 'si',
+  'cy': 'si',
+  'kn': 'n',
+  'wr': 'r',
+  'gh': ''
+};
+
+const PHONETIC_REGEX = /pentacles|wands|cups|swords|ph|ce|ci|cy|kn|wr|gh/g;
+
 /**
  * Normalizes text for phonetic/structural comparison.
  */
 export function phoneticNormalize(text: string): string {
   let normalized = text.toLowerCase().trim()
     .replace(/[^a-z0-9]/g, '')
-    .replace(/ph/g, 'f')
-    .replace(/ce/g, 'se')
-    .replace(/ci/g, 'si')
-    .replace(/cy/g, 'si')
-    .replace(/kn/g, 'n')
-    .replace(/wr/g, 'r')
-    .replace(/gh/g, '')
-    // Handle specific tarot speech issues
-    .replace(/pentacles/g, 'pent')
-    .replace(/wands/g, 'wand')
-    .replace(/cups/g, 'cup')
-    .replace(/swords/g, 'sword')
+    .replace(PHONETIC_REGEX, (match) => PHONETIC_MAP[match])
     .replace(/([a-z])\1+/g, '$1');
 
   if (normalized.length > 1) {
