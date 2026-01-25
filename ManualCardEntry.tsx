@@ -185,7 +185,7 @@ const CardInput: React.FC<CardInputProps> = ({
 };
 
 const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) => {
-  const flatDb = useMemo(() => flattenCardDatabase(), []);
+  const flatDb = flatCardDatabase;
   const [presets, setPresets] = useState<SpreadPreset[]>([]);
   const [newPresetName, setNewPresetName] = useState('');
   const [showPresets, setShowPresets] = useState(false);
