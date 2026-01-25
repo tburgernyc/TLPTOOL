@@ -1,3 +1,5 @@
+import { phoneticNormalize } from './cardMatcher';
+
 export const TAROT_DECK_DATA = {
   majorArcana: [
     { id: 'major-00', names: ['The Fool', 'Fool', 'Zero'], arcana: 'major', number: 0 },
@@ -43,12 +45,14 @@ export const flattenCardDatabase = () => {
   const flattened: any[] = [];
   TAROT_DECK_DATA.majorArcana.forEach(c => flattened.push({
     ...c,
-    normalizedNames: c.names.map(n => n.toLowerCase().trim())
+    normalizedNames: c.names.map(n => n.toLowerCase().trim()),
+    phoneticNames: c.names.map(n => phoneticNormalize(n))
   }));
   Object.values(TAROT_DECK_DATA.minorArcana).forEach(suit => {
     suit.forEach(c => flattened.push({
       ...c,
-      normalizedNames: c.names.map(n => n.toLowerCase().trim())
+      normalizedNames: c.names.map(n => n.toLowerCase().trim()),
+      phoneticNames: c.names.map(n => phoneticNormalize(n))
     }));
   });
   return flattened;
