@@ -16,6 +16,7 @@ interface CardInputProps {
   card: TarotCard;
   label: string;
   onUpdate: (section: keyof Spread, index: number | null, updates: Partial<TarotCard>) => void;
+  flatDb: any[];
 }
 
 const digitToWord = (text: string): string => {
@@ -39,9 +40,9 @@ const CardInput: React.FC<CardInputProps> = ({
   index, 
   card, 
   label,
-  onUpdate
+  onUpdate,
+  flatDb
 }) => {
-  const flatDb = useMemo(() => flattenCardDatabase(), []);
   const [isFocused, setIsFocused] = useState(false);
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [matchResult, setMatchResult] = useState<any>(null);
@@ -194,6 +195,7 @@ const CardInput: React.FC<CardInputProps> = ({
 };
 
 const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) => {
+  const flatDb = useMemo(() => flattenCardDatabase(), []);
   const [presets, setPresets] = useState<SpreadPreset[]>([]);
   const [newPresetName, setNewPresetName] = useState('');
   const [showPresets, setShowPresets] = useState(false);
@@ -295,7 +297,15 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
             <SectionHeader label={sec.label} />
             <div className="space-y-8">
               {(spread[sec.key as keyof Spread] as TarotCard[]).map((c, i) => (
-                <CardInput key={`${sec.key}-${i}`} section={sec.key as keyof Spread} index={i} card={c} label={`NODE 0${i+1}`} onUpdate={updateCard} />
+                <CardInput
+                  key={`${sec.key}-${i}`}
+                  section={sec.key as keyof Spread}
+                  index={i}
+                  card={c}
+                  label={`NODE 0${i+1}`}
+                  onUpdate={updateCard}
+                  flatDb={flatDb}
+                />
               ))}
             </div>
           </div>
@@ -304,7 +314,14 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
       <div className="flex justify-center pt-10">
         <div className="w-full max-w-sm space-y-10">
           <SectionHeader label="THE SUBCONSCIOUS" />
-          <CardInput section="bottom" index={null} card={spread.bottom} label="SHADOW BASE" onUpdate={updateCard} />
+          <CardInput
+            section="bottom"
+            index={null}
+            card={spread.bottom}
+            label="SHADOW BASE"
+            onUpdate={updateCard}
+            flatDb={flatDb}
+          />
         </div>
       </div>
     </div>
