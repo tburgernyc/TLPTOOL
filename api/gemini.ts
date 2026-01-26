@@ -6,11 +6,17 @@ import { TLP_MASTER_PROMPT, HOOK_PHRASES } from "../constants";
 // For safety in a Vercel Serverless Function (which might not bundle sibling TS files correctly without configuration),
 // we will cast payload to 'any' but keep logic consistent.
 
-function cleanScript(text: string): string {
+export function cleanScript(text: string): string {
   return text
-    .replace(/^(Here's your|Sure, here is|This script|I have generated|Certainly|Okay|Great|PART \d+:?|Section \d+:?).*$/gim, '')
-    .replace(/\[(Stage direction|Pause slightly|Take a breath|Background music).*?\]/gi, '[PAUSE]')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(
+      /(^(?:Here's your|Sure, here is|This script|I have generated|Certainly|Okay|Great|PART \d+:?|Section \d+:?).*$)|(\[(?:Stage direction|Pause slightly|Take a breath|Background music).*?\])|(\*\*(.*?)\*\*)/gim,
+      (match, p1, p2, p3, p4) => {
+        if (p1) return ''; // Remove intro lines
+        if (p2) return '[PAUSE]'; // Standardize stage directions
+        if (p3) return p4; // Unwrap bold text
+        return match;
+      }
+    )
     .replace(/(\n{3,})/g, '\n\n')
     .trim();
 }
