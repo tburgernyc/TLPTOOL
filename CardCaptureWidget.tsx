@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { flatCardDatabase } from './tarotCardDatabase';
+import { getFlatCardDatabase } from './tarotCardDatabase';
 import { parseCardFromSpeech } from './cardMatcher';
 import { Check, X, Target, Activity } from 'lucide-react';
 
@@ -51,7 +51,7 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
       if (fullText && fullText !== lastProcessedTranscript) {
         const timeoutId = setTimeout(() => {
           setListeningStatus('Scanning...');
-          const parsed = parseCardFromSpeech(fullText, flatCardDatabase);
+          const parsed = parseCardFromSpeech(fullText, getFlatCardDatabase());
 
           if (parsed.success) {
             setPendingCard(parsed);

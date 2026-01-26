@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef, memo } from 'react';
 import { TarotCard, Spread, SpreadPreset } from './types';
 import { RotateCw, Search, CheckCircle2, AlertCircle, Mic, MicOff, Save, FolderOpen, Trash2, Layout } from 'lucide-react';
-import { flatCardDatabase, flattenCardDatabase } from './tarotCardDatabase';
+import { getFlatCardDatabase } from './tarotCardDatabase';
 import { findCardMatch, parseCardFromSpeech, DIGIT_TO_NAME_MAP } from './cardMatcher';
 import { useSpeechRecognition } from './useSpeechRecognition';
 import { useDebounce } from './useDebounce';
@@ -47,7 +47,7 @@ const CardInput: React.FC<CardInputProps> = memo(({
   useEffect(() => {
     if (isRecognizing && isListening) {
       if (debouncedText) {
-        const result = parseCardFromSpeech(debouncedText, flatCardDatabase);
+        const result = parseCardFromSpeech(debouncedText, getFlatCardDatabase());
         setMatchResult(result);
         if (result.success && result.card) {
           onUpdate(section, index, { 
@@ -77,7 +77,7 @@ const CardInput: React.FC<CardInputProps> = memo(({
 
   const validation = useMemo(() => {
     if (!debouncedCardName.trim()) return { status: 'empty', match: null };
-    const match = findCardMatch(debouncedCardName, flatCardDatabase);
+    const match = findCardMatch(debouncedCardName, getFlatCardDatabase());
     if (match.card && match.confidence >= 80) {
       return { status: 'valid', match: match.card };
     }
@@ -200,7 +200,6 @@ const ManualCardEntry: React.FC<ManualCardEntryProps> = ({ spread, onChange }) =
     spreadRef.current = spread;
   }, [spread]);
 
-  const flatDb = flatCardDatabase;
   const [presets, setPresets] = useState<SpreadPreset[]>([]);
   const [newPresetName, setNewPresetName] = useState('');
   const [showPresets, setShowPresets] = useState(false);
