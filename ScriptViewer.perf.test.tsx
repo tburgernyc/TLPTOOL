@@ -26,6 +26,10 @@ class MockAudioContext {
     connect: vi.fn(),
     getByteFrequencyData: vi.fn(),
   }));
+  decodeAudioData = vi.fn(async () => ({
+    duration: 10,
+    getChannelData: vi.fn(() => new Float32Array(100)),
+  }));
   resume = vi.fn(async () => { this.state = 'running'; });
   close = vi.fn(async () => { this.state = 'closed'; });
   destination = {};
