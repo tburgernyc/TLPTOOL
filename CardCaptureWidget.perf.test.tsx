@@ -8,6 +8,7 @@ import * as cardMatcher from './cardMatcher';
 vi.mock('./tarotCardDatabase', () => ({
   flatCardDatabase: [],
   flattenCardDatabase: () => [],
+  getFlatCardDatabase: () => [],
 }));
 
 vi.mock('./cardMatcher', () => ({
