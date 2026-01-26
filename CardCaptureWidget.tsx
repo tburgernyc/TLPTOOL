@@ -208,4 +208,4 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
   );
 };
 
-export default CardCaptureWidget;
+export default React.memo(CardCaptureWidget);

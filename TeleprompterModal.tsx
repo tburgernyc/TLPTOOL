@@ -64,23 +64,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
     }
   }, [voiceTracking, reset, start, stop]);
 
-  // Handler for confirmed cards (via UI or Keyboard)
-  const handleConfirmCard = useCallback(() => {
-    if (pendingCard && isPhase1) {
-      const allCards = [...capturedCards, pendingCard.card];
-      setCapturedCards(allCards);
-      
-      // Check for completion
-      if (allCards.length === 13 && onPart2Generated && initialParams && astrologyData) {
-        finalizeReading(allCards);
-      }
-      
-      setPendingCard(null);
-      reset(); // Clear speech transcript
-    }
-  }, [pendingCard, capturedCards, isPhase1, onPart2Generated, initialParams, astrologyData, reset]);
-
-  const finalizeReading = async (allCards: any[]) => {
+  const finalizeReading = useCallback(async (allCards: any[]) => {
     setIsGenerating(true);
     setIsPaused(true);
     setVoiceTracking(false);
@@ -109,7 +93,31 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
       setModalToast({ message: e instanceof TLPError ? e.message : 'Narrative synthesis failure.', type: 'error' });
       setIsGenerating(false);
     }
-  };
+  }, [initialParams, astrologyData, script, onPart2Generated, stop]);
+
+  // Handler for confirmed cards (via UI or Keyboard)
+  const handleConfirmCard = useCallback(() => {
+    if (pendingCard && isPhase1) {
+      const allCards = [...capturedCards, pendingCard.card];
+      setCapturedCards(allCards);
+
+      // Check for completion
+      if (allCards.length === 13 && onPart2Generated && initialParams && astrologyData) {
+        finalizeReading(allCards);
+      }
+
+      setPendingCard(null);
+      reset(); // Clear speech transcript
+    }
+  }, [pendingCard, capturedCards, isPhase1, onPart2Generated, initialParams, astrologyData, reset, finalizeReading]);
+
+  const handleCardCaptured = useCallback((card: any) => {
+    const all = [...capturedCards, card];
+    setCapturedCards(all);
+    if (all.length === 13) finalizeReading(all);
+  }, [capturedCards, finalizeReading]);
+
+  const handleReset = useCallback(() => setCapturedCards([]), []);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -432,12 +440,8 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
                   <CardCaptureWidget 
                     compact 
                     capturedCards={capturedCards} 
-                    onCardCaptured={(card) => {
-                      const all = [...capturedCards, card];
-                      setCapturedCards(all);
-                      if (all.length === 13) finalizeReading(all);
-                    }} 
-                    onReset={() => setCapturedCards([])}
+                    onCardCaptured={handleCardCaptured}
+                    onReset={handleReset}
                     pendingCard={pendingCard}
                     setPendingCard={setPendingCard}
                     {...speech}

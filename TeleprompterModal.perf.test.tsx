@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, fireEvent, screen } from '@testing-library/react';
 import TeleprompterModal from './TeleprompterModal';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import * as SpeechHook from './useSpeechRecognition';
 
 // Mock dependencies to avoid complex setup
@@ -10,20 +10,39 @@ vi.mock('./geminiService', () => ({
   TLPError: class extends Error {}
 }));
 
-// Mock child components that might have their own side effects
+// Spy on CardCaptureWidget
+const CardCaptureWidgetSpy = vi.fn();
+// We use React.memo in the mock to verify that PROPS are stable.
+// If props change, React.memo would re-render.
+const MockWidget = React.memo((props: any) => {
+  CardCaptureWidgetSpy(props);
+  return <div data-testid="card-capture-widget">Widget</div>;
+});
+
+// Mock child components
 vi.mock('./CardCaptureWidget', () => ({
-  default: () => <div data-testid="card-capture-widget">Widget</div>
+  default: (props: any) => <MockWidget {...props} />
 }));
 
-describe('TeleprompterModal Performance Baseline', () => {
+describe('TeleprompterModal Performance', () => {
   let setVolumeCallback: (vol: number) => void;
+  let startMock: any;
+  let stopMock: any;
+  let resetMock: any;
 
   beforeEach(() => {
-    // Reset mocks
     vi.restoreAllMocks();
+    CardCaptureWidgetSpy.mockClear();
 
     // Mock DOM methods
     window.HTMLElement.prototype.scrollTo = vi.fn();
+    window.HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+      top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => {}
+    }));
+
+    startMock = vi.fn();
+    stopMock = vi.fn();
+    resetMock = vi.fn();
 
     // Mock useSpeechRecognition
     vi.spyOn(SpeechHook, 'useSpeechRecognition').mockImplementation((options: any) => {
@@ -33,35 +52,32 @@ describe('TeleprompterModal Performance Baseline', () => {
 
       // Mock the internal update logic
       setVolumeCallback = (newVol: number) => {
-        // Call subscribers
         subscribersRef.current.forEach(cb => cb(newVol));
-
-        // Update state ONLY if not disabled
         if (!disableVolumeState) {
           setVolumeState(newVol);
         }
       };
 
-      const subscribeToVolume = (cb: (v: number) => void) => {
+      const subscribeToVolume = React.useCallback((cb: (v: number) => void) => {
         subscribersRef.current.add(cb);
         return () => subscribersRef.current.delete(cb);
-      };
+      }, []);
 
       return {
         isListening: true,
         transcript: '',
         interimTranscript: '',
-        volume: volume, // Use the state volume
-        start: vi.fn(),
-        stop: vi.fn(),
-        reset: vi.fn(),
+        volume: volume,
+        start: startMock, // Stable ref
+        stop: stopMock,   // Stable ref
+        reset: resetMock, // Stable ref
         error: null,
         subscribeToVolume
       };
     });
   });
 
-  it('renders significantly fewer times with optimization', () => {
+  it('Modal does not re-render on volume updates when disabled', () => {
     const useSpeechSpy = vi.spyOn(SpeechHook, 'useSpeechRecognition');
 
     render(
@@ -72,25 +88,34 @@ describe('TeleprompterModal Performance Baseline', () => {
         />
     );
 
-    // Reset spy count from initial render
     const initialCalls = useSpeechSpy.mock.calls.length;
 
-    // Simulate volume updates
-    act(() => {
-      setVolumeCallback(10);
-    });
-
-    act(() => {
-      setVolumeCallback(20);
-    });
-
-    act(() => {
-      setVolumeCallback(30);
-    });
+    act(() => { setVolumeCallback(10); });
+    act(() => { setVolumeCallback(20); });
 
     const finalCalls = useSpeechSpy.mock.calls.length;
-
-    // The component should NOT have re-rendered, so the hook should NOT have been called again
     expect(finalCalls).toBe(initialCalls);
+  });
+
+  it('CardCaptureWidget does not re-render when Modal re-renders for unrelated reasons', () => {
+    render(
+      <TeleprompterModal
+        script="Test script"
+        onClose={vi.fn()}
+        isPhase1={true}
+        initialParams={{ sign: 'Aries', mode: 'general' }}
+        astrologyData={{ sunSign: 'Aries' } as any}
+      />
+    );
+
+    // Initial render
+    expect(CardCaptureWidgetSpy).toHaveBeenCalledTimes(1);
+
+    // Trigger state update in Modal (Toggle Pause)
+    const pauseButton = screen.getByTitle('Toggle Sequence [SPACE]');
+    fireEvent.click(pauseButton);
+
+    // Should NOT re-render CardCaptureWidget
+    expect(CardCaptureWidgetSpy).toHaveBeenCalledTimes(1);
   });
 });
