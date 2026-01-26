@@ -58,7 +58,22 @@ export const flattenCardDatabase = () => {
   return flattened;
 };
 
-export const flatCardDatabase = flattenCardDatabase();
+let cachedFlatDatabase: any[] | null = null;
+
+export const getFlatCardDatabase = () => {
+  if (!cachedFlatDatabase) {
+    cachedFlatDatabase = flattenCardDatabase();
+  }
+  return cachedFlatDatabase;
+};
 
 // Generated canonical list of card names for random pulls and validation
-export const CANONICAL_TAROT_LIST = flatCardDatabase.map(c => c.names[0]);
+// Optimization: Generated directly from TAROT_DECK_DATA to avoid expensive phonetic normalization at module load
+export const CANONICAL_TAROT_LIST = (() => {
+  const names: string[] = [];
+  TAROT_DECK_DATA.majorArcana.forEach(c => names.push(c.names[0]));
+  Object.values(TAROT_DECK_DATA.minorArcana).forEach(suit => {
+    suit.forEach(c => names.push(c.names[0]));
+  });
+  return names;
+})();
