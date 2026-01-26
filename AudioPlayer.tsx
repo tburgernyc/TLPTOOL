@@ -29,12 +29,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioData }) => {
     return bytes;
   };
 
-  const decodeAudioData = async (
+  // Fallback: Manual PCM decoding if native method fails
+  const manualDecodePCM = (
     data: Uint8Array,
     ctx: AudioContext,
     sampleRate: number,
     numChannels: number,
-  ): Promise<AudioBuffer> => {
+  ): AudioBuffer => {
     const dataInt16 = new Int16Array(data.buffer);
     const frameCount = dataInt16.length / numChannels;
     const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
@@ -46,6 +47,89 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioData }) => {
       }
     }
     return buffer;
+  };
+
+  // Helper to create a minimal WAV header for raw PCM data
+  const createWavHeader = (dataLength: number, sampleRate: number, numChannels: number, bitDepth: number) => {
+    const buffer = new ArrayBuffer(44);
+    const view = new DataView(buffer);
+
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
+    view.setUint16(32, numChannels * (bitDepth / 8), true);
+    view.setUint16(34, bitDepth, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataLength, true);
+
+    return buffer;
+  };
+
+  const robustDecodeAudio = async (
+    data: Uint8Array,
+    ctx: AudioContext,
+    sampleRate: number,
+    numChannels: number
+  ): Promise<AudioBuffer> => {
+    // 1. Sniff for existing container (RIFF/WAV, ID3/MP3, Ogg, etc.)
+    // Simple check: 'RIFF' at start or 'ID3' or sync words.
+    // If it looks like a container, try native decode immediately.
+    const isContainer =
+      (data[0] === 0x52 && data[1] === 0x49 && data[2] === 0x46 && data[3] === 0x46) || // RIFF
+      (data[0] === 0x49 && data[1] === 0x44 && data[2] === 0x33) || // ID3
+      (data[0] === 0xFF && (data[1] & 0xE0) === 0xE0); // MP3 Frame Sync (approx)
+
+    // Helper to handle decodeAudioData promise/callback compat
+    const decodeCompat = (buffer: ArrayBuffer): Promise<AudioBuffer> => {
+      return new Promise((resolve, reject) => {
+        try {
+          const res = ctx.decodeAudioData(buffer, resolve, reject);
+          // If it returns a promise (modern browsers), wait for it
+          if (res && typeof res.then === 'function') {
+            res.then(resolve).catch(reject);
+          }
+        } catch (e) {
+          reject(e);
+        }
+      });
+    };
+
+    if (isContainer) {
+      try {
+        // Copy data to ensure ArrayBuffer compatibility
+        const bufferCopy = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+        return await decodeCompat(bufferCopy);
+      } catch (e) {
+        console.warn("Container decode failed, falling back...", e);
+      }
+    }
+
+    // 2. Wrap raw PCM in WAV header and try native decode
+    try {
+      const header = createWavHeader(data.length, sampleRate, numChannels, 16);
+      const wavBuffer = new Uint8Array(header.byteLength + data.length);
+      wavBuffer.set(new Uint8Array(header), 0);
+      wavBuffer.set(data, header.byteLength);
+
+      return await decodeCompat(wavBuffer.buffer);
+    } catch (e) {
+      console.warn("WAV-wrap decode failed, falling back to manual loop.", e);
+    }
+
+    // 3. Fallback: Manual PCM loop
+    return manualDecodePCM(data, ctx, sampleRate, numChannels);
   };
 
   const drawVisualizer = () => {
@@ -129,7 +213,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioData }) => {
       }
 
       const audioBytes = decodeBase64(audioData);
-      const audioBuffer = await decodeAudioData(audioBytes, audioContextRef.current, 24000, 1);
+      // Try robust native decode, with manual fallback
+      const audioBuffer = await robustDecodeAudio(audioBytes, audioContextRef.current, 24000, 1);
 
       setDuration(audioBuffer.duration);
 
