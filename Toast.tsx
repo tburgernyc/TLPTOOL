@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { AlertCircle, X, Terminal } from 'lucide-react';
 
-export type ToastType = 'error' | 'success' | 'info';
+export type ToastType = 'error' | 'success' | 'info' | 'warning';
 
 interface ToastProps {
   message: string;
@@ -41,6 +41,13 @@ const Toast: React.FC<ToastProps> = ({ message, code, type = 'error', onClose, d
       iconColor: 'text-taupe-accent',
       label: 'System Update',
       shadow: 'shadow-taupe-accent/20'
+    },
+    warning: {
+      border: 'border-amber-500/30',
+      bg: 'bg-amber-500/[0.03]',
+      iconColor: 'text-amber-500',
+      label: 'System Warning',
+      shadow: 'shadow-amber-900/20'
     }
   }[type];
 
