@@ -82,6 +82,9 @@
   backdrop-filter: blur(60px);
   z-index: 20;
   box-shadow: 0 -40px 100px rgba(0,0,0,1);
+  flex-shrink: 0;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .mirror-mode .teleprompter-display-area {

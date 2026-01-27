@@ -19,24 +19,24 @@ interface TeleprompterModalProps {
   astrologyData?: AstrologyData;
 }
 
-const TeleprompterModal: React.FC<TeleprompterModalProps> = ({ 
-  script: initialScript, 
-  onClose, 
-  isPhase1, 
+const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
+  script: initialScript,
+  onClose,
+  isPhase1,
   onPart2Generated,
   initialParams,
   astrologyData
 }) => {
   const [script, setScript] = useState(initialScript);
   const [isPaused, setIsPaused] = useState(true);
-  const [fontSize, setFontSize] = useState(38); 
+  const [fontSize, setFontSize] = useState(38);
   const [scrollSpeed, setScrollSpeed] = useState(180);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isMirror, setIsMirror] = useState(false);
   const [voiceTracking, setVoiceTracking] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSmartScroll, setIsSmartScroll] = useState(true);
-  
+
   const [modalToast, setModalToast] = useState<{ message: string; code?: string; type: ToastType } | null>(null);
   const [capturedCards, setCapturedCards] = useState<any[]>([]);
   // Lifted state to handle keyboard shortcuts for confirmation
@@ -46,9 +46,9 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const scrollTimeoutRef = useRef<number | null>(null);
   const isAutoScrollingRef = useRef<boolean>(false);
-  
+
   const speech = useSpeechRecognition({ disableVolumeState: true });
-  const { isListening, transcript, volume, start, stop, reset, error: micError } = speech;
+  const { isListening, transcript, interimTranscript, volume, start, stop, reset, error: micError } = speech;
 
   const words = useMemo(() => parseScriptToWords(script), [script]);
 
@@ -69,12 +69,12 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
     if (pendingCard && isPhase1) {
       const allCards = [...capturedCards, pendingCard.card];
       setCapturedCards(allCards);
-      
+
       // Check for completion
       if (allCards.length === 13 && onPart2Generated && initialParams && astrologyData) {
         finalizeReading(allCards);
       }
-      
+
       setPendingCard(null);
       reset(); // Clear speech transcript
     }
@@ -85,7 +85,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
     setIsPaused(true);
     setVoiceTracking(false);
     stop();
-    
+
     try {
       const spread: Spread = {
         situation: allCards.slice(0, 3),
@@ -94,15 +94,15 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
         outcome: allCards.slice(9, 12),
         bottom: allCards[12]
       };
-      
+
       const part2 = await generatePart2(initialParams!, astrologyData!, spread, script);
       const full = `${script}\n\n${part2}`;
-      
+
       setScript(full);
       onPart2Generated!(full, spread);
       setIsGenerating(false);
       setModalToast({ message: 'Semantic Matrix Synthesized. Script Updated.', type: 'success' });
-      
+
       setTimeout(() => setIsPaused(false), 2000);
     } catch (e: any) {
       console.error('Teleprompter Protocol Error:', e);
@@ -157,13 +157,17 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   }, [micError]);
 
   useEffect(() => {
-    if (voiceTracking && isListening && transcript) {
-      const nextIndex = findMatchingWordIndex(transcript, words, currentWordIndex);
+    if (voiceTracking && isListening) {
+      // Combine final transcript with interim for real-time matching
+      const combinedText = (transcript + ' ' + interimTranscript).trim();
+      if (!combinedText) return;
+
+      const nextIndex = findMatchingWordIndex(combinedText, words, currentWordIndex);
       if (nextIndex > currentWordIndex) {
         setCurrentWordIndex(nextIndex);
       }
     }
-  }, [transcript, voiceTracking, isListening, words, currentWordIndex]);
+  }, [transcript, interimTranscript, voiceTracking, isListening, words, currentWordIndex]);
 
   const calculateNextWordDelay = useCallback((index: number) => {
     const baseDelay = (60 * 1000) / scrollSpeed;
@@ -175,10 +179,10 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
     let multiplier = 1.0;
     if (word.text.length > 8) multiplier += 0.3;
     else if (word.text.length > 5) multiplier += 0.15;
-    
+
     if (/[.!?;]/.test(word.original)) multiplier += 1.2;
     else if (/,:/.test(word.original)) multiplier += 0.6;
-    
+
     if (word.original.includes('[PAUSE]')) multiplier += 2.5;
     if (word.original.includes('[EMPHASIS]')) multiplier += 0.4;
 
@@ -206,12 +210,12 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
       const container = displayRef.current;
       const wordRect = targetWord.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
-      
+
       const scrollTop = container.scrollTop + (wordRect.top - containerRect.top) - (containerRect.height / 2) + (wordRect.height / 2);
-      
-      container.scrollTo({ 
-        top: scrollTop, 
-        behavior: isAutoScrollingRef.current ? 'smooth' : 'auto' 
+
+      container.scrollTo({
+        top: scrollTop,
+        behavior: isAutoScrollingRef.current ? 'smooth' : 'auto'
       });
       isAutoScrollingRef.current = false;
     }
@@ -232,7 +236,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
           </div>
         </div>
       )}
-      
+
       <div className="teleprompter-header border-b border-white/5">
         <div className="flex items-center gap-10">
           <div className="flex flex-col">
@@ -243,17 +247,17 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
               <span>{isPhase1 ? 'STAGE 01' : 'FINAL BROADCAST'}</span>
             </div>
           </div>
-          
+
           {isListening && <VolumeIndicator subscribeToVolume={speech.subscribeToVolume} />}
         </div>
-        
+
         <div className="flex items-center gap-12">
-           <div className="flex flex-col items-end">
-              <span className="text-[10px] font-black tracking-widest uppercase opacity-30">Protocol Progress</span>
-              <span className="text-xl font-black text-gold-accent tabular-nums tracking-tighter">{progress}%</span>
-           </div>
-           <button 
-            onClick={onClose} 
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-black tracking-widest uppercase opacity-30">Protocol Progress</span>
+            <span className="text-xl font-black text-gold-accent tabular-nums tracking-tighter">{progress}%</span>
+          </div>
+          <button
+            onClick={onClose}
             className="p-5 bg-white/5 hover:bg-rose-500/10 hover:text-rose-500 rounded-2xl border border-white/5 transition-all group"
             title="Terminate Protocol (ESC)"
           >
@@ -323,7 +327,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
         )}
       </div>
 
-      <div className="teleprompter-controls flex flex-col gap-8 py-12 px-16">
+      <div className="teleprompter-controls flex flex-col gap-4 py-6 px-8">
         {isPhase1 && (
           <div className="w-full max-w-6xl mx-auto mb-4">
             <div className="flex justify-between items-center mb-5">
@@ -338,7 +342,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
           </div>
         )}
 
-        <div className="flex items-center justify-between w-full gap-20">
+        <div className="flex items-center justify-between w-full gap-8">
           <div className="flex-1 flex flex-col gap-5">
             <div className="flex justify-between items-center px-1">
               <div className="flex items-center gap-3">
@@ -348,9 +352,9 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
               <span className="text-[14px] font-black text-white tabular-nums tracking-widest">{scrollSpeed} WPM</span>
             </div>
             <div className="relative h-14 flex items-center bg-white/[0.03] px-6 rounded-2xl border border-white/5 shadow-inner">
-              <input 
-                type="range" min="40" max="450" step="5" value={scrollSpeed} 
-                onChange={(e) => setScrollSpeed(parseInt(e.target.value))} 
+              <input
+                type="range" min="40" max="450" step="5" value={scrollSpeed}
+                onChange={(e) => setScrollSpeed(parseInt(e.target.value))}
                 className="control-slider w-full accent-gold-accent cursor-pointer"
                 disabled={voiceTracking}
               />
@@ -358,19 +362,19 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
           </div>
 
           <div className="flex items-center gap-8">
-            <button 
+            <button
               onClick={() => {
                 isAutoScrollingRef.current = false;
                 setCurrentWordIndex(0);
-              }} 
+              }}
               className="p-6 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all shadow-xl group"
               title="Reset Sequence"
             >
               <RotateCcw className="w-6 h-6 text-white/40 group-hover:text-white transition-colors" />
             </button>
 
-            <button 
-              onClick={() => setIsSmartScroll(!isSmartScroll)} 
+            <button
+              onClick={() => setIsSmartScroll(!isSmartScroll)}
               className={`flex flex-col items-center gap-3 p-6 min-w-[100px] rounded-2xl transition-all duration-500 border-2 shadow-2xl ${isSmartScroll ? 'bg-gold-accent/20 border-gold-accent/50 text-gold-accent' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'}`}
               title="Toggle Pacing Intelligence"
             >
@@ -378,8 +382,8 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
               <span className="text-[9px] font-black uppercase tracking-[0.3em]">Smart</span>
             </button>
 
-            <button 
-              onClick={() => setIsPaused(!isPaused)} 
+            <button
+              onClick={() => setIsPaused(!isPaused)}
               className={`w-28 h-28 rounded-full flex items-center justify-center transition-all duration-500 transform hover:scale-110 shadow-[0_0_50px_rgba(0,0,0,0.5)] ${isPaused ? 'bg-gold-accent text-black rotate-[360deg]' : 'bg-white text-black'}`}
               title="Toggle Sequence [SPACE]"
             >
@@ -389,7 +393,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
               )}
             </button>
 
-            <button 
+            <button
               onClick={toggleVoiceTracking}
               className={`flex flex-col items-center gap-3 p-6 min-w-[100px] rounded-2xl transition-all duration-500 border-2 shadow-2xl ${voiceTracking ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'}`}
               title="Toggle Acoustic Following [V]"
@@ -409,17 +413,17 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
                 <span className="text-[14px] font-black text-white tabular-nums tracking-widest">{fontSize} PX</span>
               </div>
               <div className="relative h-14 flex items-center bg-white/[0.03] px-6 rounded-2xl border border-white/5 shadow-inner">
-                <input 
-                  type="range" min="16" max="140" step="2" value={fontSize} 
-                  onChange={(e) => setFontSize(parseInt(e.target.value))} 
+                <input
+                  type="range" min="16" max="140" step="2" value={fontSize}
+                  onChange={(e) => setFontSize(parseInt(e.target.value))}
                   className="control-slider w-full accent-gold-accent cursor-pointer"
                 />
               </div>
             </div>
 
             <div className="flex items-center gap-6">
-              <button 
-                onClick={() => setIsMirror(!isMirror)} 
+              <button
+                onClick={() => setIsMirror(!isMirror)}
                 className={`p-7 rounded-2xl transition-all duration-500 border-2 flex flex-col items-center gap-3 shadow-2xl ${isMirror ? 'bg-gold-accent text-black border-gold-accent' : 'bg-white/5 text-white/30 border-white/5'}`}
                 title="Mirror Layout [M]"
               >
@@ -429,14 +433,14 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
 
               {isPhase1 && (
                 <div className="border-l border-white/10 pl-10 ml-6">
-                  <CardCaptureWidget 
-                    compact 
-                    capturedCards={capturedCards} 
+                  <CardCaptureWidget
+                    compact
+                    capturedCards={capturedCards}
                     onCardCaptured={(card) => {
                       const all = [...capturedCards, card];
                       setCapturedCards(all);
                       if (all.length === 13) finalizeReading(all);
-                    }} 
+                    }}
                     onReset={() => setCapturedCards([])}
                     pendingCard={pendingCard}
                     setPendingCard={setPendingCard}
