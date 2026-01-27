@@ -2,7 +2,9 @@ import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'vite';
 // @ts-ignore - Importing TS file directly requires ts-node/tsx handling which we have
-import handler from '../api/gemini';
+import geminiHandler from '../api/gemini';
+// @ts-ignore
+import healthHandler from '../api/health';
 
 async function startServer() {
   const app = express();
@@ -19,13 +21,21 @@ async function startServer() {
   // Parse JSON bodies (needed for the API)
   app.use(express.json());
 
-  // API Route
+  // API Routes
   app.post('/api/gemini', async (req, res) => {
     try {
-      // Mock Vercel-like behavior if needed, but Express req/res is close enough
-      await handler(req, res);
+      await geminiHandler(req, res);
     } catch (e) {
-      console.error('API Error:', e);
+      console.error('API Error (Gemini):', e);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.get('/api/health', async (req, res) => {
+    try {
+      await healthHandler(req, res);
+    } catch (e) {
+      console.error('API Error (Health):', e);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
