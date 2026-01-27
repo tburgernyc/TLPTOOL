@@ -74,7 +74,7 @@ export default async function handler(req: any, res: any) {
         }
       });
 
-      const text = response.text();
+      const text = response.text;
       try {
         result = JSON.parse(text || '{}');
       } catch (e) {
@@ -103,7 +103,7 @@ export default async function handler(req: any, res: any) {
         3. PRE-PULL: Set the focus for this timeframe.
         DO NOT GENERATE THE CARD READING YET.`,
       });
-      result = cleanScript(response.text() || "");
+      result = cleanScript(response.text || "");
 
     } else if (action === 'generatePart2') {
       const { params, astrology, spread, introText } = payload;
@@ -142,7 +142,7 @@ export default async function handler(req: any, res: any) {
           thinkingConfig: isDeep ? { thinkingBudget: 4000 } : undefined
         }
       });
-      result = cleanScript(response.text() || "");
+      result = cleanScript(response.text || "");
 
     } else if (action === 'generateSpeech') {
       const { text } = payload;
