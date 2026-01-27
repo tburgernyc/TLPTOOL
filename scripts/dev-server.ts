@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'vite';
 // @ts-ignore - Importing TS file directly requires ts-node/tsx handling which we have
