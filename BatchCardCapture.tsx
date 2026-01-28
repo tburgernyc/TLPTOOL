@@ -99,8 +99,10 @@ const BatchCardCapture: React.FC<BatchCardCaptureProps> = ({
             const newCards = [...capturedCards];
             newCards[lastFilledIndex] = null;
             setCapturedCards(newCards);
+            // Reset transcript tracking to allow re-detection of the same card
+            setLastProcessedLength(Math.max(0, lastProcessedLength - 100));
         }
-    }, [capturedCards]);
+    }, [capturedCards, lastProcessedLength]);
 
     // Handle reset all
     const handleResetAll = useCallback(() => {
