@@ -33,9 +33,10 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   const [scrollSpeed, setScrollSpeed] = useState(180);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isMirror, setIsMirror] = useState(false);
-  const [voiceTracking, setVoiceTracking] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false); // Renamed: only for card capture, not scroll
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSmartScroll, setIsSmartScroll] = useState(true);
+  const [countdown, setCountdown] = useState<number | null>(null); // Countdown timer (10, 9, 8...)
 
   const [modalToast, setModalToast] = useState<{ message: string; code?: string; type: ToastType } | null>(null);
   const [capturedCards, setCapturedCards] = useState<any[]>([]);
@@ -52,17 +53,44 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
 
   const words = useMemo(() => parseScriptToWords(script), [script]);
 
-  const toggleVoiceTracking = useCallback(() => {
-    if (!voiceTracking) {
-      setVoiceTracking(true);
+  // Toggle card capture (voice recognition for cards only, NOT scroll tracking)
+  const toggleCapture = useCallback(() => {
+    if (!isCapturing) {
+      setIsCapturing(true);
       reset();
       start();
-      setIsPaused(false);
     } else {
-      setVoiceTracking(false);
+      setIsCapturing(false);
       stop();
     }
-  }, [voiceTracking, reset, start, stop]);
+  }, [isCapturing, reset, start, stop]);
+
+  // Start with countdown - triggers auto-scroll after delay
+  const startWithCountdown = useCallback(() => {
+    setCountdown(10);
+    setIsPaused(true); // Keep paused during countdown
+  }, []);
+
+  // Countdown effect
+  useEffect(() => {
+    if (countdown === null) return;
+
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Countdown finished - start auto-scroll and capture
+      setCountdown(null);
+      setIsPaused(false);
+
+      // Auto-start card capture in Phase 1
+      if (isPhase1 && !isCapturing) {
+        reset();
+        start();
+        setIsCapturing(true);
+      }
+    }
+  }, [countdown, isPhase1, isCapturing, reset, start]);
 
   // Handler for confirmed cards (via UI or Keyboard)
   const handleConfirmCard = useCallback(() => {
@@ -83,7 +111,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   const finalizeReading = async (allCards: any[]) => {
     setIsGenerating(true);
     setIsPaused(true);
-    setVoiceTracking(false);
+    setIsCapturing(false);
     stop();
 
     try {
@@ -121,7 +149,14 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
 
       if (key === 'Space') {
         e.preventDefault();
-        setIsPaused(prev => !prev);
+        if (isPaused && countdown === null) {
+          startWithCountdown();
+        } else if (countdown !== null) {
+          setCountdown(null);
+          setIsPaused(true);
+        } else {
+          setIsPaused(true);
+        }
       } else if (key === 'ArrowUp') {
         e.preventDefault();
         setScrollSpeed(s => Math.min(s + 5, 450));
@@ -131,9 +166,9 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
       } else if (char === 'm') {
         e.preventDefault();
         setIsMirror(prev => !prev);
-      } else if (char === 'v') {
+      } else if (char === 'v' && isPhase1) {
         e.preventDefault();
-        toggleVoiceTracking();
+        toggleCapture();
       } else if (key === 'Enter' && pendingCard) {
         e.preventDefault();
         handleConfirmCard();
@@ -147,27 +182,17 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose, pendingCard, handleConfirmCard, toggleVoiceTracking, reset]);
+  }, [onClose, pendingCard, handleConfirmCard, toggleCapture, reset, isPhase1, isPaused, countdown, startWithCountdown]);
 
   useEffect(() => {
     if (micError) {
       setModalToast({ message: `Acoustic Hardware Fault: ${micError}`, type: 'error' });
-      setVoiceTracking(false);
+      setIsCapturing(false);
     }
   }, [micError]);
 
-  useEffect(() => {
-    if (voiceTracking && isListening) {
-      // Combine final transcript with interim for real-time matching
-      const combinedText = (transcript + ' ' + interimTranscript).trim();
-      if (!combinedText) return;
-
-      const nextIndex = findMatchingWordIndex(combinedText, words, currentWordIndex);
-      if (nextIndex > currentWordIndex) {
-        setCurrentWordIndex(nextIndex);
-      }
-    }
-  }, [transcript, interimTranscript, voiceTracking, isListening, words, currentWordIndex]);
+  // Voice recognition is now ONLY for card capture via CardCaptureWidget
+  // Script scrolling is handled independently by auto-scroll timer below
 
   const calculateNextWordDelay = useCallback((index: number) => {
     const baseDelay = (60 * 1000) / scrollSpeed;
@@ -189,9 +214,10 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
     return baseDelay * multiplier;
   }, [scrollSpeed, isSmartScroll, words]);
 
+  // Auto-scroll timer - runs independently of voice capture
   useEffect(() => {
     const triggerNextWord = () => {
-      if (isPaused || voiceTracking || currentWordIndex >= words.length - 1) return;
+      if (isPaused || countdown !== null || currentWordIndex >= words.length - 1) return;
 
       const delay = calculateNextWordDelay(currentWordIndex);
       scrollTimeoutRef.current = window.setTimeout(() => {
@@ -202,7 +228,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
 
     triggerNextWord();
     return () => { if (scrollTimeoutRef.current) window.clearTimeout(scrollTimeoutRef.current); };
-  }, [currentWordIndex, isPaused, voiceTracking, calculateNextWordDelay, words.length]);
+  }, [currentWordIndex, isPaused, countdown, calculateNextWordDelay, words.length]);
 
   useEffect(() => {
     const targetWord = wordRefs.current[currentWordIndex];
@@ -226,6 +252,24 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   return (
     <div className={`teleprompter-modal ${isMirror ? 'mirror-mode' : ''}`}>
       {modalToast && <Toast {...modalToast} onClose={() => setModalToast(null)} />}
+
+      {/* Countdown Overlay */}
+      {countdown !== null && (
+        <div className="absolute inset-0 bg-black/95 backdrop-blur-3xl z-[350] flex flex-col items-center justify-center">
+          <div className="text-[200px] font-black text-gold-accent tabular-nums animate-pulse">
+            {countdown}
+          </div>
+          <p className="text-[12px] font-black uppercase tracking-[0.8em] text-white/40 mt-8">
+            Starting in...
+          </p>
+          <button
+            onClick={() => { setCountdown(null); setIsPaused(true); }}
+            className="mt-12 px-8 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {isGenerating && (
         <div className="absolute inset-0 bg-black/98 backdrop-blur-3xl z-[300] flex flex-col items-center justify-center p-8 text-center">
@@ -286,7 +330,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
         <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-8 bg-black/60 backdrop-blur-xl px-8 py-3 rounded-2xl border border-white/5 z-40 opacity-40 hover:opacity-100 transition-opacity">
           <div className="flex items-center gap-2">
             <kbd className="px-2 py-1 bg-white/10 rounded-md text-[9px] font-black text-white/60">SPACE</kbd>
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Toggle</span>
+            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Start/Stop</span>
           </div>
           <div className="flex items-center gap-2">
             <kbd className="px-2 py-1 bg-white/10 rounded-md text-[9px] font-black text-white/60">↑/↓</kbd>
@@ -296,10 +340,12 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
             <kbd className="px-2 py-1 bg-white/10 rounded-md text-[9px] font-black text-white/60">M</kbd>
             <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Mirror</span>
           </div>
-          <div className="flex items-center gap-2">
-            <kbd className="px-2 py-1 bg-white/10 rounded-md text-[9px] font-black text-white/60">V</kbd>
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Voice</span>
-          </div>
+          {isPhase1 && (
+            <div className="flex items-center gap-2">
+              <kbd className="px-2 py-1 bg-white/10 rounded-md text-[9px] font-black text-white/60">V</kbd>
+              <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Capture</span>
+            </div>
+          )}
           {isPhase1 && (
             <div className="flex items-center gap-4 border-l border-white/10 pl-8">
               <div className="flex items-center gap-2">
@@ -342,115 +388,129 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
           </div>
         )}
 
-        <div className="flex items-center justify-between w-full gap-8">
-          <div className="flex-1 flex flex-col gap-5">
+        {/* Main Controls Row - Centered with flex-wrap for responsiveness */}
+        <div className="flex items-center justify-center w-full gap-6 flex-wrap">
+          {/* Velocity Slider - Fixed width */}
+          <div className="flex flex-col gap-3 w-48 shrink-0">
             <div className="flex justify-between items-center px-1">
-              <div className="flex items-center gap-3">
-                <Zap className="w-4 h-4 text-gold-accent opacity-30" />
-                <span className="text-[10px] font-black tracking-[0.5em] uppercase opacity-30">Velocity</span>
+              <div className="flex items-center gap-2">
+                <Zap className="w-3 h-3 text-gold-accent opacity-30" />
+                <span className="text-[9px] font-black tracking-[0.3em] uppercase opacity-30">Velocity</span>
               </div>
-              <span className="text-[14px] font-black text-white tabular-nums tracking-widest">{scrollSpeed} WPM</span>
+              <span className="text-[12px] font-black text-white tabular-nums">{scrollSpeed} WPM</span>
             </div>
-            <div className="relative h-14 flex items-center bg-white/[0.03] px-6 rounded-2xl border border-white/5 shadow-inner">
+            <div className="relative h-12 flex items-center bg-white/[0.03] px-4 rounded-xl border border-white/5 shadow-inner">
               <input
                 type="range" min="40" max="450" step="5" value={scrollSpeed}
                 onChange={(e) => setScrollSpeed(parseInt(e.target.value))}
                 className="control-slider w-full accent-gold-accent cursor-pointer"
-                disabled={voiceTracking}
+                disabled={countdown !== null}
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-8">
+          {/* Central Control Buttons - All essential controls visible */}
+          <div className="flex items-center gap-4 shrink-0">
             <button
               onClick={() => {
                 isAutoScrollingRef.current = false;
                 setCurrentWordIndex(0);
               }}
-              className="p-6 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all shadow-xl group"
+              className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl transition-all shadow-xl group"
               title="Reset Sequence"
             >
-              <RotateCcw className="w-6 h-6 text-white/40 group-hover:text-white transition-colors" />
+              <RotateCcw className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
             </button>
 
             <button
               onClick={() => setIsSmartScroll(!isSmartScroll)}
-              className={`flex flex-col items-center gap-3 p-6 min-w-[100px] rounded-2xl transition-all duration-500 border-2 shadow-2xl ${isSmartScroll ? 'bg-gold-accent/20 border-gold-accent/50 text-gold-accent' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'}`}
+              className={`flex flex-col items-center gap-2 p-4 min-w-[80px] rounded-xl transition-all duration-500 border-2 shadow-xl ${isSmartScroll ? 'bg-gold-accent/20 border-gold-accent/50 text-gold-accent' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'}`}
               title="Toggle Pacing Intelligence"
             >
-              <BrainCircuit className="w-6 h-6" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em]">Smart</span>
+              <BrainCircuit className="w-5 h-5" />
+              <span className="text-[8px] font-black uppercase tracking-[0.2em]">Smart</span>
             </button>
 
             <button
-              onClick={() => setIsPaused(!isPaused)}
-              className={`w-28 h-28 rounded-full flex items-center justify-center transition-all duration-500 transform hover:scale-110 shadow-[0_0_50px_rgba(0,0,0,0.5)] ${isPaused ? 'bg-gold-accent text-black rotate-[360deg]' : 'bg-white text-black'}`}
-              title="Toggle Sequence [SPACE]"
+              onClick={() => {
+                if (isPaused && countdown === null) {
+                  startWithCountdown();
+                } else if (countdown !== null) {
+                  setCountdown(null);
+                  setIsPaused(true);
+                } else {
+                  setIsPaused(true);
+                }
+              }}
+              className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500 transform hover:scale-110 shadow-[0_0_50px_rgba(0,0,0,0.5)] ${isPaused && countdown === null ? 'bg-gold-accent text-black' : 'bg-white text-black'}`}
+              title="Start with Countdown [SPACE]"
             >
-              {isPaused ? <Play className="w-12 h-12 ml-2" /> : <Pause className="w-12 h-12" />}
+              {isPaused && countdown === null ? <Play className="w-10 h-10 ml-1" /> : <Pause className="w-10 h-10" />}
               {!isPaused && (
                 <div className="absolute -inset-4 border-2 border-white/20 rounded-full animate-ping pointer-events-none" />
               )}
             </button>
 
+            {/* Capture Button - Only shown in Phase 1 for card capture */}
+            {isPhase1 && (
+              <button
+                onClick={toggleCapture}
+                className={`flex flex-col items-center gap-2 p-4 min-w-[80px] rounded-xl transition-all duration-500 border-2 shadow-xl ${isCapturing ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'}`}
+                title="Toggle Card Capture [V]"
+              >
+                {isCapturing ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
+                <span className="text-[8px] font-black uppercase tracking-[0.2em]">Capture</span>
+              </button>
+            )}
+
+            {/* Mirror Button - Now in central controls for visibility */}
             <button
-              onClick={toggleVoiceTracking}
-              className={`flex flex-col items-center gap-3 p-6 min-w-[100px] rounded-2xl transition-all duration-500 border-2 shadow-2xl ${voiceTracking ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'}`}
-              title="Toggle Acoustic Following [V]"
+              onClick={() => setIsMirror(!isMirror)}
+              className={`flex flex-col items-center gap-2 p-4 min-w-[80px] rounded-xl transition-all duration-500 border-2 shadow-xl ${isMirror ? 'bg-gold-accent text-black border-gold-accent' : 'bg-white/5 text-white/30 border-white/5 hover:border-white/20'}`}
+              title="Mirror Layout [M]"
             >
-              {voiceTracking ? <Mic className="w-6 h-6 animate-pulse" /> : <MicOff className="w-6 h-6" />}
-              <span className="text-[9px] font-black uppercase tracking-[0.3em]">Voice</span>
+              <FlipHorizontal className="w-5 h-5" />
+              <span className="text-[8px] font-black uppercase tracking-[0.2em]">Mirror</span>
             </button>
           </div>
 
-          <div className="flex-1 flex items-center gap-12 justify-end">
-            <div className="flex flex-col gap-5 w-64">
-              <div className="flex justify-between items-center px-1">
-                <div className="flex items-center gap-3">
-                  <Type className="w-4 h-4 text-gold-accent opacity-30" />
-                  <span className="text-[10px] font-black tracking-[0.5em] uppercase opacity-30">Scaling</span>
-                </div>
-                <span className="text-[14px] font-black text-white tabular-nums tracking-widest">{fontSize} PX</span>
+          {/* Scaling Slider - Fixed width */}
+          <div className="flex flex-col gap-3 w-48 shrink-0">
+            <div className="flex justify-between items-center px-1">
+              <div className="flex items-center gap-2">
+                <Type className="w-3 h-3 text-gold-accent opacity-30" />
+                <span className="text-[9px] font-black tracking-[0.3em] uppercase opacity-30">Scaling</span>
               </div>
-              <div className="relative h-14 flex items-center bg-white/[0.03] px-6 rounded-2xl border border-white/5 shadow-inner">
-                <input
-                  type="range" min="16" max="140" step="2" value={fontSize}
-                  onChange={(e) => setFontSize(parseInt(e.target.value))}
-                  className="control-slider w-full accent-gold-accent cursor-pointer"
-                />
-              </div>
+              <span className="text-[12px] font-black text-white tabular-nums">{fontSize} PX</span>
             </div>
-
-            <div className="flex items-center gap-6">
-              <button
-                onClick={() => setIsMirror(!isMirror)}
-                className={`p-7 rounded-2xl transition-all duration-500 border-2 flex flex-col items-center gap-3 shadow-2xl ${isMirror ? 'bg-gold-accent text-black border-gold-accent' : 'bg-white/5 text-white/30 border-white/5'}`}
-                title="Mirror Layout [M]"
-              >
-                <FlipHorizontal className="w-8 h-8" />
-                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Mirror</span>
-              </button>
-
-              {isPhase1 && (
-                <div className="border-l border-white/10 pl-10 ml-6">
-                  <CardCaptureWidget
-                    compact
-                    capturedCards={capturedCards}
-                    onCardCaptured={(card) => {
-                      const all = [...capturedCards, card];
-                      setCapturedCards(all);
-                      if (all.length === 13) finalizeReading(all);
-                    }}
-                    onReset={() => setCapturedCards([])}
-                    pendingCard={pendingCard}
-                    setPendingCard={setPendingCard}
-                    {...speech}
-                  />
-                </div>
-              )}
+            <div className="relative h-12 flex items-center bg-white/[0.03] px-4 rounded-xl border border-white/5 shadow-inner">
+              <input
+                type="range" min="16" max="140" step="2" value={fontSize}
+                onChange={(e) => setFontSize(parseInt(e.target.value))}
+                className="control-slider w-full accent-gold-accent cursor-pointer"
+              />
             </div>
           </div>
         </div>
+
+        {/* Card Capture Widget - Separate row for visibility when isPhase1 */}
+        {isPhase1 && (
+          <div className="flex items-center justify-center mt-4 pt-4 border-t border-white/5">
+            <CardCaptureWidget
+              compact
+              capturedCards={capturedCards}
+              onCardCaptured={(card) => {
+                const all = [...capturedCards, card];
+                setCapturedCards(all);
+                if (all.length === 13) finalizeReading(all);
+              }}
+              onReset={() => setCapturedCards([])}
+              pendingCard={pendingCard}
+              setPendingCard={setPendingCard}
+              {...speech}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
