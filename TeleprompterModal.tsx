@@ -3,6 +3,7 @@ import { useSpeechRecognition } from './useSpeechRecognition';
 import { parseScriptToWords, findMatchingWordIndex, WordToken } from './scriptParser';
 import { X, Play, Pause, RotateCcw, Mic, MicOff, Type, FlipHorizontal, ChevronLeft, ChevronRight, Zap, Radio, Info, Activity, MousePointer2, BrainCircuit, Keyboard } from 'lucide-react';
 import CardCaptureWidget from './CardCaptureWidget';
+import BatchCardCapture from './BatchCardCapture';
 import { VolumeIndicator } from './VolumeIndicator';
 import Toast, { ToastType } from './Toast';
 import { generatePart2, TLPError } from './geminiService';
@@ -37,6 +38,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSmartScroll, setIsSmartScroll] = useState(true);
   const [countdown, setCountdown] = useState<number | null>(null); // Countdown timer (10, 9, 8...)
+  const [isCardCaptureMode, setIsCardCaptureMode] = useState(false); // Batch card capture mode
 
   const [modalToast, setModalToast] = useState<{ message: string; code?: string; type: ToastType } | null>(null);
   const [capturedCards, setCapturedCards] = useState<any[]>([]);
@@ -247,6 +249,42 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
     }
   }, [currentWordIndex]);
 
+  // Auto-trigger card capture mode when script ends in Phase 1
+  useEffect(() => {
+    if (
+      isPhase1 &&
+      !isCardCaptureMode &&
+      !isGenerating &&
+      currentWordIndex >= words.length - 1 &&
+      words.length > 0
+    ) {
+      // Script reached the end - trigger batch card capture mode
+      setIsPaused(true);
+      setIsCardCaptureMode(true);
+      reset();
+      start();
+      setIsCapturing(true);
+    }
+  }, [currentWordIndex, words.length, isPhase1, isCardCaptureMode, isGenerating, reset, start]);
+
+  // Handle batch card confirmation from BatchCardCapture
+  const handleBatchConfirm = useCallback((cards: any[]) => {
+    setIsCardCaptureMode(false);
+    setIsCapturing(false);
+    stop();
+    setCapturedCards(cards);
+    finalizeReading(cards);
+  }, [stop]);
+
+  // Handle cancel batch capture
+  const handleCancelCapture = useCallback(() => {
+    setIsCardCaptureMode(false);
+    setIsCapturing(false);
+    stop();
+    setCurrentWordIndex(0);
+    setIsPaused(true);
+  }, [stop]);
+
   const progress = Math.round((currentWordIndex / (words.length - 1 || 1)) * 100);
 
   return (
@@ -269,6 +307,18 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
             Cancel
           </button>
         </div>
+      )}
+
+      {/* Batch Card Capture Overlay */}
+      {isCardCaptureMode && (
+        <BatchCardCapture
+          onConfirm={handleBatchConfirm}
+          onCancel={handleCancelCapture}
+          isListening={isListening}
+          transcript={transcript}
+          interimTranscript={interimTranscript}
+          reset={reset}
+        />
       )}
 
       {isGenerating && (
