@@ -261,11 +261,20 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
       // Script reached the end - trigger batch card capture mode
       setIsPaused(true);
       setIsCardCaptureMode(true);
-      reset();
-      start();
-      setIsCapturing(true);
+
+      // Stop any existing speech recognition first to ensure clean state
+      stop();
+
+      // Delay before restarting speech recognition to avoid browser API conflicts
+      const startDelay = setTimeout(() => {
+        reset();
+        start();
+        setIsCapturing(true);
+      }, 300);
+
+      return () => clearTimeout(startDelay);
     }
-  }, [currentWordIndex, words.length, isPhase1, isCardCaptureMode, isGenerating, reset, start]);
+  }, [currentWordIndex, words.length, isPhase1, isCardCaptureMode, isGenerating, reset, start, stop]);
 
   // Handle batch card confirmation from BatchCardCapture
   const handleBatchConfirm = useCallback((cards: any[]) => {
