@@ -277,6 +277,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
           transcript={transcript}
           interimTranscript={interimTranscript}
           reset={reset}
+          start={start}
         />
       )}
 

@@ -15,6 +15,7 @@ interface BatchCardCaptureProps {
     transcript: string;
     interimTranscript: string;
     reset: () => void;
+    start: () => void;
 }
 
 // Card position labels for the 13-card spread
@@ -33,6 +34,7 @@ const BatchCardCapture: React.FC<BatchCardCaptureProps> = ({
     transcript,
     interimTranscript,
     reset,
+    start,
 }) => {
     const [capturedCards, setCapturedCards] = useState<(CapturedCard | null)[]>(
         Array(13).fill(null)
@@ -43,10 +45,12 @@ const BatchCardCapture: React.FC<BatchCardCaptureProps> = ({
     const [latestDetection, setLatestDetection] = useState<string>('');
     const [isReady, setIsReady] = useState(false);
 
-    // Initialize on mount - clear any stale transcript data and ensure fresh start
+    // Initialize on mount - clear transcript and start microphone
     useEffect(() => {
         // Reset transcript to clear any content from Phase 1 reading
         reset();
+        // Start microphone listening
+        start();
         // Mark as ready after a short delay to let speech recognition initialize
         const readyTimer = setTimeout(() => {
             setIsReady(true);
