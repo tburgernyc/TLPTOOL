@@ -39,8 +39,28 @@ const BatchCardCapture: React.FC<BatchCardCaptureProps> = ({
     );
     const [lastProcessedLength, setLastProcessedLength] = useState(0);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
-    const [listeningStatus, setListeningStatus] = useState('Listening for cards...');
+    const [listeningStatus, setListeningStatus] = useState('Initializing microphone...');
     const [latestDetection, setLatestDetection] = useState<string>('');
+    const [isReady, setIsReady] = useState(false);
+
+    // Initialize on mount - clear any stale transcript data and ensure fresh start
+    useEffect(() => {
+        // Reset transcript to clear any content from Phase 1 reading
+        reset();
+        // Mark as ready after a short delay to let speech recognition initialize
+        const readyTimer = setTimeout(() => {
+            setIsReady(true);
+            setListeningStatus(isListening ? 'Listening for cards...' : 'Waiting for microphone...');
+        }, 500);
+        return () => clearTimeout(readyTimer);
+    }, []); // Run only on mount
+
+    // Update listening status when isListening changes
+    useEffect(() => {
+        if (isReady) {
+            setListeningStatus(isListening ? 'Listening for cards...' : 'Microphone inactive - check permissions');
+        }
+    }, [isListening, isReady]);
 
     // Get all card names for dropdown
     const allCardNames = CANONICAL_TAROT_LIST;
@@ -51,7 +71,7 @@ const BatchCardCapture: React.FC<BatchCardCaptureProps> = ({
 
     // Listen for new cards in the transcript
     useEffect(() => {
-        if (!isListening) return;
+        if (!isListening || !isReady) return;
 
         const fullText = (transcript + ' ' + interimTranscript).trim();
         if (!fullText || fullText.length <= lastProcessedLength) return;
