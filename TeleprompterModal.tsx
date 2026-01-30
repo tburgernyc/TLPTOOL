@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useSpeechRecognition } from './useSpeechRecognition';
 import { parseScriptToWords, findMatchingWordIndex, WordToken } from './scriptParser';
-import { X, Play, Pause, RotateCcw, Mic, MicOff, Type, FlipHorizontal, ChevronLeft, ChevronRight, Zap, Radio, Info, Activity, MousePointer2, BrainCircuit, Keyboard } from 'lucide-react';
-import CardCaptureWidget from './CardCaptureWidget';
+import { X, Play, Pause, RotateCcw, Type, FlipHorizontal, Zap, BrainCircuit, Radio } from 'lucide-react';
 import BatchCardCapture from './BatchCardCapture';
 import { VolumeIndicator } from './VolumeIndicator';
 import Toast, { ToastType } from './Toast';
@@ -34,7 +33,6 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   const [scrollSpeed, setScrollSpeed] = useState(180);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isMirror, setIsMirror] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false); // Renamed: only for card capture, not scroll
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSmartScroll, setIsSmartScroll] = useState(true);
   const [countdown, setCountdown] = useState<number | null>(null); // Countdown timer (10, 9, 8...)
@@ -42,8 +40,6 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
 
   const [modalToast, setModalToast] = useState<{ message: string; code?: string; type: ToastType } | null>(null);
   const [capturedCards, setCapturedCards] = useState<any[]>([]);
-  // Lifted state to handle keyboard shortcuts for confirmation
-  const [pendingCard, setPendingCard] = useState<any>(null);
 
   const displayRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -55,17 +51,7 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
 
   const words = useMemo(() => parseScriptToWords(script), [script]);
 
-  // Toggle card capture (voice recognition for cards only, NOT scroll tracking)
-  const toggleCapture = useCallback(() => {
-    if (!isCapturing) {
-      setIsCapturing(true);
-      reset();
-      start();
-    } else {
-      setIsCapturing(false);
-      stop();
-    }
-  }, [isCapturing, reset, start, stop]);
+  // Card capture is now handled exclusively by BatchCardCapture after script ends
 
   // Start with countdown - triggers auto-scroll after delay
   const startWithCountdown = useCallback(() => {
@@ -81,39 +67,18 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     } else {
-      // Countdown finished - start auto-scroll and capture
+      // Countdown finished - start auto-scroll only (no card capture yet)
       setCountdown(null);
       setIsPaused(false);
-
-      // Auto-start card capture in Phase 1
-      if (isPhase1 && !isCapturing) {
-        reset();
-        start();
-        setIsCapturing(true);
-      }
+      // Card capture will activate automatically when script ends via useEffect below
     }
-  }, [countdown, isPhase1, isCapturing, reset, start]);
+  }, [countdown]);
 
-  // Handler for confirmed cards (via UI or Keyboard)
-  const handleConfirmCard = useCallback(() => {
-    if (pendingCard && isPhase1) {
-      const allCards = [...capturedCards, pendingCard.card];
-      setCapturedCards(allCards);
-
-      // Check for completion
-      if (allCards.length === 13 && onPart2Generated && initialParams && astrologyData) {
-        finalizeReading(allCards);
-      }
-
-      setPendingCard(null);
-      reset(); // Clear speech transcript
-    }
-  }, [pendingCard, capturedCards, isPhase1, onPart2Generated, initialParams, astrologyData, reset]);
+  // Card confirmation now handled exclusively by BatchCardCapture component
 
   const finalizeReading = async (allCards: any[]) => {
     setIsGenerating(true);
     setIsPaused(true);
-    setIsCapturing(false);
     stop();
 
     try {
@@ -168,33 +133,21 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
       } else if (char === 'm') {
         e.preventDefault();
         setIsMirror(prev => !prev);
-      } else if (char === 'v' && isPhase1) {
-        e.preventDefault();
-        toggleCapture();
-      } else if (key === 'Enter' && pendingCard) {
-        e.preventDefault();
-        handleConfirmCard();
-      } else if (key === 'Backspace' && pendingCard) {
-        e.preventDefault();
-        setPendingCard(null);
-        reset();
       } else if (key === 'Escape') {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose, pendingCard, handleConfirmCard, toggleCapture, reset, isPhase1, isPaused, countdown, startWithCountdown]);
+  }, [onClose, isPaused, countdown, startWithCountdown]);
 
   useEffect(() => {
     if (micError) {
       setModalToast({ message: `Acoustic Hardware Fault: ${micError}`, type: 'error' });
-      setIsCapturing(false);
     }
   }, [micError]);
 
-  // Voice recognition is now ONLY for card capture via CardCaptureWidget
-  // Script scrolling is handled independently by auto-scroll timer below
+  // Voice recognition is activated only when card capture mode begins
 
   const calculateNextWordDelay = useCallback((index: number) => {
     const baseDelay = (60 * 1000) / scrollSpeed;
@@ -269,7 +222,6 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
       const startDelay = setTimeout(() => {
         reset();
         start();
-        setIsCapturing(true);
       }, 300);
 
       return () => clearTimeout(startDelay);
@@ -279,7 +231,6 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   // Handle batch card confirmation from BatchCardCapture
   const handleBatchConfirm = useCallback((cards: any[]) => {
     setIsCardCaptureMode(false);
-    setIsCapturing(false);
     stop();
     setCapturedCards(cards);
     finalizeReading(cards);
@@ -288,7 +239,6 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
   // Handle cancel batch capture
   const handleCancelCapture = useCallback(() => {
     setIsCardCaptureMode(false);
-    setIsCapturing(false);
     stop();
     setCurrentWordIndex(0);
     setIsPaused(true);
@@ -399,34 +349,17 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
             <kbd className="px-2 py-1 bg-white/10 rounded-md text-[9px] font-black text-white/60">M</kbd>
             <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Mirror</span>
           </div>
-          {isPhase1 && (
-            <div className="flex items-center gap-2">
-              <kbd className="px-2 py-1 bg-white/10 rounded-md text-[9px] font-black text-white/60">V</kbd>
-              <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Capture</span>
-            </div>
-          )}
-          {isPhase1 && (
-            <div className="flex items-center gap-4 border-l border-white/10 pl-8">
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-md text-[9px] font-black">ENT</kbd>
-                <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Capture</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-rose-500/20 text-rose-400 rounded-md text-[9px] font-black">BKSP</kbd>
-                <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Reject</span>
-              </div>
-            </div>
-          )}
         </div>
 
-        {isPhase1 && currentWordIndex < 15 && (
-          <div className="absolute top-12 left-12 bg-black/90 backdrop-blur-3xl p-8 rounded-[2.5rem] border border-emerald-500/30 text-left animate-in fade-in slide-in-from-left-4 duration-1000 z-[100] shadow-2xl max-w-[320px]">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 mb-5">
-              <MousePointer2 className="w-5 h-5" />
+        {/* Part 01 Completion Notice - shown near end of script */}
+        {isPhase1 && currentWordIndex >= words.length * 0.85 && currentWordIndex < words.length - 1 && (
+          <div className="absolute top-12 left-12 bg-black/90 backdrop-blur-3xl p-8 rounded-[2.5rem] border border-amber-500/30 text-left animate-in fade-in slide-in-from-left-4 duration-1000 z-[100] shadow-2xl max-w-[340px]">
+            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500 mb-5">
+              <Radio className="w-5 h-5" />
             </div>
-            <h5 className="text-sm font-black text-white uppercase tracking-[0.4em] mb-2">Initialize Capture</h5>
+            <h5 className="text-sm font-black text-white uppercase tracking-[0.4em] mb-2">Part 01 Nearly Complete</h5>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.1em] leading-relaxed">
-              Read the anchor script clearly. While reading, use the widget below or [ENTER] to capture each card. Final reading will synthesize after Node 13.
+              Card capture mode will activate automatically when you reach the end of this script. Prepare to speak your 13 tarot cards clearly.
             </p>
           </div>
         )}
@@ -510,18 +443,6 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
               )}
             </button>
 
-            {/* Capture Button - Only shown in Phase 1 for card capture */}
-            {isPhase1 && (
-              <button
-                onClick={toggleCapture}
-                className={`flex flex-col items-center gap-2 p-4 min-w-[80px] rounded-xl transition-all duration-500 border-2 shadow-xl ${isCapturing ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/20'}`}
-                title="Toggle Card Capture [V]"
-              >
-                {isCapturing ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
-                <span className="text-[8px] font-black uppercase tracking-[0.2em]">Capture</span>
-              </button>
-            )}
-
             {/* Mirror Button - Now in central controls for visibility */}
             <button
               onClick={() => setIsMirror(!isMirror)}
@@ -551,25 +472,6 @@ const TeleprompterModal: React.FC<TeleprompterModalProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Card Capture Widget - Separate row for visibility when isPhase1 */}
-        {isPhase1 && (
-          <div className="flex items-center justify-center mt-4 pt-4 border-t border-white/5">
-            <CardCaptureWidget
-              compact
-              capturedCards={capturedCards}
-              onCardCaptured={(card) => {
-                const all = [...capturedCards, card];
-                setCapturedCards(all);
-                if (all.length === 13) finalizeReading(all);
-              }}
-              onReset={() => setCapturedCards([])}
-              pendingCard={pendingCard}
-              setPendingCard={setPendingCard}
-              {...speech}
-            />
-          </div>
-        )}
       </div>
     </div>
   );

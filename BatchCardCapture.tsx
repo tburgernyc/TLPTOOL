@@ -290,7 +290,7 @@ const BatchCardCapture: React.FC<BatchCardCaptureProps> = ({
                         }`}
                 >
                     <Check className="w-5 h-5" />
-                    <span className="text-[11px]">Confirm Cards</span>
+                    <span className="text-[11px]">Approve Cards</span>
                 </button>
 
                 <button
