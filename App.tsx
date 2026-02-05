@@ -8,6 +8,7 @@ import Toast, { ToastType } from './Toast';
 import LoadingIndicator from './LoadingIndicator';
 import { ReadingParams, GeneratedReading, Spread, TarotCard, ReadingMode } from './types';
 import { TAROT_DECK } from './constants';
+import { getCardImageByName } from './tarotCardDatabase';
 import { fetchAstrology, generatePart1, generatePart2, generateSpeech, TLPError } from './geminiService';
 import { Moon, Star, ChevronDown, ChevronUp, History, Trash2, Clock, ShieldCheck, Zap, Globe, ChevronRight, Sparkles, Layout as LayoutIcon, Eye, EyeOff } from 'lucide-react';
 
@@ -22,11 +23,14 @@ const App: React.FC = () => {
   const [showManualSpread, setShowManualSpread] = useState(false);
   const [toast, setToast] = useState<{ message: string; code?: string; type: ToastType } | null>(null);
 
-  const pullRandomCard = useCallback((): TarotCard => ({
-    name: TAROT_DECK[Math.floor(Math.random() * TAROT_DECK.length)],
-    orientation: Math.random() > 0.25 ? 'Upright' : 'Reversed',
-    imageUrl: ''
-  }), []);
+  const pullRandomCard = useCallback((): TarotCard => {
+    const cardName = TAROT_DECK[Math.floor(Math.random() * TAROT_DECK.length)];
+    return {
+      name: cardName,
+      orientation: Math.random() > 0.25 ? 'Upright' : 'Reversed',
+      imageUrl: getCardImageByName(cardName)
+    };
+  }, []);
 
   const generateRandomSpread = useCallback((): Spread => ({
     situation: Array(3).fill(null).map(pullRandomCard),

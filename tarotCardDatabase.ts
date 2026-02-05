@@ -1,5 +1,40 @@
 import { phoneticNormalize } from './cardMatcher';
 
+// Public domain Rider-Waite-Smith tarot deck images (1909)
+// Format: Major Arcana = ar00-ar21, Wands = wa01-wa14, Cups = cu01-cu14, Swords = sw01-sw14, Pentacles = pe01-pe14
+const CARD_IMAGE_BASE = 'https://www.sacred-texts.com/tarot/pkt/img/';
+
+export const getCardImageUrl = (cardId: string): string => {
+  if (cardId.startsWith('major-')) {
+    const num = parseInt(cardId.replace('major-', ''), 10);
+    return `${CARD_IMAGE_BASE}ar${num.toString().padStart(2, '0')}.jpg`;
+  }
+  if (cardId.startsWith('wands-')) {
+    const num = parseInt(cardId.replace('wands-', ''), 10);
+    return `${CARD_IMAGE_BASE}wa${num.toString().padStart(2, '0')}.jpg`;
+  }
+  if (cardId.startsWith('cups-')) {
+    const num = parseInt(cardId.replace('cups-', ''), 10);
+    return `${CARD_IMAGE_BASE}cu${num.toString().padStart(2, '0')}.jpg`;
+  }
+  if (cardId.startsWith('swords-')) {
+    const num = parseInt(cardId.replace('swords-', ''), 10);
+    return `${CARD_IMAGE_BASE}sw${num.toString().padStart(2, '0')}.jpg`;
+  }
+  if (cardId.startsWith('pentacles-')) {
+    const num = parseInt(cardId.replace('pentacles-', ''), 10);
+    return `${CARD_IMAGE_BASE}pe${num.toString().padStart(2, '0')}.jpg`;
+  }
+  return '';
+};
+
+// Helper to get image URL by card name
+export const getCardImageByName = (cardName: string): string => {
+  const db = getFlatCardDatabase();
+  const card = db.find(c => c.names.some((n: string) => n.toLowerCase() === cardName.toLowerCase()));
+  return card ? getCardImageUrl(card.id) : '';
+};
+
 export const TAROT_DECK_DATA = {
   majorArcana: [
     { id: 'major-00', names: ['The Fool', 'Fool', 'Zero'], arcana: 'major', number: 0 },
@@ -27,16 +62,16 @@ export const TAROT_DECK_DATA = {
   ],
   minorArcana: {
     wands: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Page', 'Knight', 'Queen', 'King'].map((n, i) => ({
-      id: `wands-${i+1}`, names: [`${n} of Wands`, `${n} Wands`, `${n} of Rods`, `${n} Rods`, `${n} of Staves`, `${n} Staves`], suit: 'wands', number: i+1
+      id: `wands-${i + 1}`, names: [`${n} of Wands`, `${n} Wands`, `${n} of Rods`, `${n} Rods`, `${n} of Staves`, `${n} Staves`], suit: 'wands', number: i + 1
     })),
     cups: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Page', 'Knight', 'Queen', 'King'].map((n, i) => ({
-      id: `cups-${i+1}`, names: [`${n} of Cups`, `${n} Cups`, `${n} of Chalices`, `${n} Chalices`], suit: 'cups', number: i+1
+      id: `cups-${i + 1}`, names: [`${n} of Cups`, `${n} Cups`, `${n} of Chalices`, `${n} Chalices`], suit: 'cups', number: i + 1
     })),
     swords: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Page', 'Knight', 'Queen', 'King'].map((n, i) => ({
-      id: `swords-${i+1}`, names: [`${n} of Swords`, `${n} Swords`, `${n} of Blades`, `${n} Blades`], suit: 'swords', number: i+1
+      id: `swords-${i + 1}`, names: [`${n} of Swords`, `${n} Swords`, `${n} of Blades`, `${n} Blades`], suit: 'swords', number: i + 1
     })),
     pentacles: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Page', 'Knight', 'Queen', 'King'].map((n, i) => ({
-      id: `pentacles-${i+1}`, names: [`${n} of Pentacles`, `${n} Pentacles`, `${n} of Coins`, `${n} Coins`, `${n} of Disks`, `${n} Disks`, `${n} of Stones`, `${n} Stones`], suit: 'pentacles', number: i+1
+      id: `pentacles-${i + 1}`, names: [`${n} of Pentacles`, `${n} Pentacles`, `${n} of Coins`, `${n} Coins`, `${n} of Disks`, `${n} Disks`, `${n} of Stones`, `${n} Stones`], suit: 'pentacles', number: i + 1
     })),
   }
 };
