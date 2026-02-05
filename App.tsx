@@ -14,6 +14,8 @@ import { Moon, Star, ChevronDown, ChevronUp, History, Trash2, Clock, ShieldCheck
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'generator' | 'history'>('generator');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const [currentReading, setCurrentReading] = useState<GeneratedReading | null>(null);
   const [history, setHistory] = useState<GeneratedReading[]>([]);
   const [showAstrology, setShowAstrology] = useState(true);
@@ -54,15 +56,50 @@ const App: React.FC = () => {
     setToast({ message, code, type });
   }, []);
 
+  // Helper function to generate audio in the background
+  const generateAudioInBackground = async (readingId: string, fullScript: string) => {
+    setIsGeneratingAudio(true);
+    try {
+      // Add timeout protection - 60 second limit
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Audio generation timed out')), 60000)
+      );
+
+      const audioData = await Promise.race([
+        generateSpeech(fullScript),
+        timeoutPromise
+      ]);
+
+      // Update the reading with audio data
+      setCurrentReading(prev => {
+        if (prev && prev.id === readingId) {
+          const updated = { ...prev, audioData };
+          saveToHistory(updated);
+          return updated;
+        }
+        return prev;
+      });
+
+      setShouldAutoPlay(true);
+      showToast('Vocal synthesis complete. Audio ready.', 'TTS_OK', 'success');
+    } catch (e: any) {
+      console.warn("TTS generation failed:", e);
+      showToast('Audio synthesis failed. Text-only mode active.', 'TTS_WARN', 'warning');
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
   const handleStartGeneration = async (params: ReadingParams) => {
     setIsLoading(true);
     setToast(null);
     setCurrentReading(null);
-    
+    setShouldAutoPlay(false);
+
     try {
       // Step 1: Celestial Data Retrieval
       const astroData = await fetchAstrology(params.startDate, params.endDate);
-      
+
       // Step 2: Part 1 Synthesis (Intro/Hook)
       const introText = await generatePart1(params, astroData);
 
@@ -75,28 +112,27 @@ const App: React.FC = () => {
         const fullScript = `${introText}\n\n${fullBody}`;
         const wordCount = fullScript.split(/\s+/).length;
 
-        let audioData: string | undefined;
-        if (params.includeAudio) {
-          try {
-            audioData = await generateSpeech(fullScript);
-          } catch (e) {
-            console.warn("TTS skipped", e);
-            showToast('Audio synthesis failed. Text-only mode active.', 'TTS_WARN', 'warning');
-          }
-        }
-
+        const readingId = crypto.randomUUID();
         const reading: GeneratedReading = {
-          id: crypto.randomUUID(), params, astrology: astroData, spread,
+          id: readingId, params, astrology: astroData, spread,
           hook: introText.split('\n')[0], introText, readingBody: fullBody,
-          fullScript, audioData, wordCount, createdAt: Date.now()
+          fullScript, wordCount, createdAt: Date.now()
         };
+
+        // Render script IMMEDIATELY - don't wait for audio
         setCurrentReading(reading);
         saveToHistory(reading);
-        showToast('Full Synthesis Complete.', 'SYNC_OK', 'success');
-        
+        showToast('Script synthesis complete.', 'SYNC_OK', 'success');
+        setIsLoading(false);
+
         setTimeout(() => {
           document.getElementById('script-output')?.scrollIntoView({ behavior: 'smooth' });
         }, 500);
+
+        // Generate audio in background AFTER script is rendered
+        if (params.includeAudio) {
+          generateAudioInBackground(readingId, fullScript);
+        }
       } else {
         // MANUAL WORKFLOW (TWO-PART): Stop after Intro, prepare for Node Capture
         const reading: GeneratedReading = {
@@ -109,14 +145,14 @@ const App: React.FC = () => {
         setCurrentReading(reading);
         saveToHistory(reading);
         showToast('Stage 01 Anchor Finalized. Ready for Node Capture.', 'STAGE_01_OK', 'info');
-        
+        setIsLoading(false);
+
         setTimeout(() => {
           document.getElementById('script-output')?.scrollIntoView({ behavior: 'smooth' });
         }, 500);
       }
     } catch (e: any) {
       showToast(e instanceof TLPError ? e.message : 'Celestial transmission failure.', e?.code);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -137,7 +173,7 @@ const App: React.FC = () => {
   return (
     <Layout activeTab={activeTab} onTabChange={setActiveTab}>
       <div className="fixed top-[15%] left-1/2 -translate-x-1/2 w-[80vw] h-[50vw] bg-white/[0.02] rounded-full blur-[160px] -z-10 animate-soft-pulse pointer-events-none" />
-      
+
       {isLoading && !currentReading && (
         <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-2xl flex items-center justify-center">
           <LoadingIndicator size="lg" label="Synchronizing Celestial Data..." />
@@ -154,11 +190,11 @@ const App: React.FC = () => {
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/60">Verified TLP Protocol v3.8</span>
               </div>
-              
+
               <div className="relative mx-auto w-full max-w-4xl aspect-[21/9] mb-16 perspective-container group">
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 rounded-[3rem]" />
                 <div className="relative w-full h-full neo-3d-card p-1.5 overflow-hidden rounded-[3rem] border border-gold-accent/20">
-                  <div 
+                  <div
                     className="w-full h-full bg-cover bg-center transition-transform duration-1000 group-hover:scale-110"
                     style={{ backgroundImage: `url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=2300&auto=format&fit=crop')` }}
                   />
@@ -173,17 +209,17 @@ const App: React.FC = () => {
                 TLP <span className="font-light opacity-50">Video Tool</span>
               </h2>
             </div>
-            
+
             <div className="space-y-12">
               <ReadingForm onSubmit={handleStartGeneration} isLoading={isLoading} />
-              
+
               <div className="neo-3d-card p-8 md:p-12 space-y-8">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-6">
                     <LayoutIcon className="w-6 h-6 text-taupe-accent" />
                     <h3 className="text-sm font-black text-white uppercase tracking-[0.4em]">Node Configuration Override</h3>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setShowManualSpread(!showManualSpread)}
                     className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${showManualSpread ? 'bg-gold-accent text-black' : 'text-taupe-accent hover:text-white'}`}
                   >
@@ -191,7 +227,7 @@ const App: React.FC = () => {
                     {showManualSpread ? 'Override Active' : 'Manual Override'}
                   </button>
                 </div>
-                
+
                 {showManualSpread && (
                   <div className="pt-8 border-t border-white/[0.05] animate-in fade-in slide-in-from-top-4 duration-500">
                     <p className="text-[10px] font-bold text-taupe-accent/60 uppercase tracking-widest mb-10 text-center">
@@ -207,7 +243,7 @@ const App: React.FC = () => {
           {currentReading && (
             <div className="space-y-56 animate-in fade-in duration-1000 px-4">
               <section className="neo-3d-card overflow-hidden">
-                <button 
+                <button
                   onClick={() => setShowAstrology(!showAstrology)}
                   className="w-full flex items-center justify-between p-14 hover:bg-white/5 transition-all"
                 >
@@ -248,7 +284,13 @@ const App: React.FC = () => {
               )}
 
               <section id="script-output" className="pt-24 scroll-mt-40">
-                <ScriptViewer reading={currentReading} onPart2Generated={handleUpdateReading} />
+                <ScriptViewer
+                  reading={currentReading}
+                  onPart2Generated={handleUpdateReading}
+                  isGeneratingAudio={isGeneratingAudio}
+                  shouldAutoPlay={shouldAutoPlay}
+                  onAutoPlayComplete={() => setShouldAutoPlay(false)}
+                />
               </section>
             </div>
           )}
@@ -258,7 +300,7 @@ const App: React.FC = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-5xl font-black uppercase text-white">Archive Vault</h2>
             {history.length > 0 && (
-              <button 
+              <button
                 onClick={clearHistory}
                 className="flex items-center gap-3 text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 transition-colors"
               >
@@ -266,7 +308,7 @@ const App: React.FC = () => {
               </button>
             )}
           </div>
-          
+
           {history.length === 0 ? (
             <div className="py-40 text-center neo-3d-card opacity-40">
               <Clock className="w-24 h-24 mx-auto mb-8" />
@@ -282,10 +324,10 @@ const App: React.FC = () => {
                       {new Date(r.createdAt).toLocaleDateString()} // {r.params.mode} // {r.wordCount} UNITS
                     </p>
                   </div>
-                  <button 
-                    onClick={() => { 
-                      setCurrentReading(r); 
-                      setActiveTab('generator'); 
+                  <button
+                    onClick={() => {
+                      setCurrentReading(r);
+                      setActiveTab('generator');
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className="px-10 py-4 neo-3d-button !text-white text-[12px] font-black uppercase"
@@ -297,8 +339,9 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
-      )}
-    </Layout>
+      )
+      }
+    </Layout >
   );
 };
 
