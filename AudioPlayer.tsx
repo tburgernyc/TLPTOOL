@@ -3,9 +3,11 @@ import { Play, Pause, Activity, Music, Sparkles } from 'lucide-react';
 
 interface AudioPlayerProps {
   audioData: string;
+  autoPlay?: boolean;
+  onAutoPlayComplete?: () => void;
 }
 
-const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioData }) => {
+const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioData, autoPlay, onAutoPlayComplete }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -174,7 +176,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioData }) => {
     if (audioSourceRef.current) {
       try {
         audioSourceRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
       audioSourceRef.current = null;
     }
     if (animationFrameRef.current) {
@@ -263,11 +265,32 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioData }) => {
     return () => {
       stopAudio();
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current.close().catch(() => { });
         audioContextRef.current = null;
       }
     };
   }, []);
+
+  // Auto-play effect - triggered when autoPlay prop becomes true
+  useEffect(() => {
+    if (autoPlay && audioData && !isPlaying) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        handlePlayAudio().then(() => {
+          // Notify parent that auto-play was attempted
+          if (onAutoPlayComplete) {
+            onAutoPlayComplete();
+          }
+        }).catch((err) => {
+          console.warn('Auto-play failed (browser may require user gesture):', err);
+          if (onAutoPlayComplete) {
+            onAutoPlayComplete();
+          }
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPlay, audioData]);
 
   const formatTime = (time: number) => {
     const mins = Math.floor(time / 60);
@@ -307,11 +330,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioData }) => {
           <button
             onClick={handlePlayAudio}
             aria-label={isPlaying ? "Pause audio synthesis" : "Play audio synthesis"}
-            className={`relative w-28 h-28 rounded-full flex items-center justify-center transition-all duration-700 shadow-2xl ${
-              isPlaying
+            className={`relative w-28 h-28 rounded-full flex items-center justify-center transition-all duration-700 shadow-2xl ${isPlaying
               ? 'bg-gold-accent text-black scale-105 shadow-gold-accent/40'
               : 'bg-white/5 text-gold-accent border border-gold-accent/30 hover:bg-gold-accent/10'
-            }`}
+              }`}
           >
             {isPlaying ? <Pause className="w-10 h-10" /> : <Play className="w-10 h-10 ml-2" />}
           </button>

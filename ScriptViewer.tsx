@@ -7,9 +7,12 @@ import AudioPlayer from './AudioPlayer';
 interface ScriptViewerProps {
   reading: GeneratedReading;
   onPart2Generated?: (reading: GeneratedReading) => void;
+  isGeneratingAudio?: boolean;
+  shouldAutoPlay?: boolean;
+  onAutoPlayComplete?: () => void;
 }
 
-const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }) => {
+const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated, isGeneratingAudio, shouldAutoPlay, onAutoPlayComplete }) => {
   const [copied, setCopied] = useState(false);
   const [fontSize, setFontSize] = useState(20);
   const [showTeleprompter, setShowTeleprompter] = useState(false);
@@ -22,7 +25,7 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
 
   const handleDownload = () => {
     const element = document.createElement("a");
-    const file = new Blob([reading.fullScript], {type: 'text/plain'});
+    const file = new Blob([reading.fullScript], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
     const timeframe = reading.params.startDate === reading.params.endDate ? reading.params.startDate : `${reading.params.startDate}_to_${reading.params.endDate}`;
     element.download = `TLP_${reading.params.sign}_${timeframe}.txt`;
@@ -82,9 +85,9 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
             Timeframe: {reading.params.startDate} — {reading.params.endDate} • UNITS: {reading.wordCount}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => setShowTeleprompter(true)}
             className="flex items-center gap-3 px-10 py-4 neo-3d-button !bg-taupe-accent/20 !text-taupe-accent border-taupe-accent/30 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:!bg-taupe-accent/30 transition-all group"
           >
@@ -92,11 +95,10 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
             {isOnlyPhase1 ? 'Live Node Capture' : 'Initiate Broadcast'}
           </button>
 
-          <button 
+          <button
             onClick={handleCopy}
-            className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all duration-500 ${
-              copied ? 'neo-3d-input text-emerald-400' : 'neo-3d-button !text-white'
-            }`}
+            className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all duration-500 ${copied ? 'neo-3d-input text-emerald-400' : 'neo-3d-button !text-white'
+              }`}
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             {copied ? 'Copied' : 'Sync Clipboard'}
@@ -105,23 +107,40 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
       </div>
 
       {/* Enhanced Vocal Synthesis Layer */}
+      {isGeneratingAudio && !reading.audioData && (
+        <div className="neo-3d-card p-10 border border-gold-accent/10 relative overflow-hidden">
+          <div className="flex items-center gap-6">
+            <div className="w-12 h-12 rounded-full bg-gold-accent/10 flex items-center justify-center animate-pulse">
+              <Activity className="w-6 h-6 text-gold-accent" />
+            </div>
+            <div>
+              <h4 className="text-[11px] font-black text-white uppercase tracking-[0.4em]">Generating Vocal Synthesis</h4>
+              <p className="text-[9px] font-bold text-gold-accent/50 uppercase tracking-widest mt-1">Processing audio stream...</p>
+            </div>
+          </div>
+        </div>
+      )}
       {reading.audioData && (
-        <AudioPlayer audioData={reading.audioData} />
+        <AudioPlayer
+          audioData={reading.audioData}
+          autoPlay={shouldAutoPlay}
+          onAutoPlayComplete={onAutoPlayComplete}
+        />
       )}
 
       {/* Professional Script Interface */}
       <div className="neo-3d-card p-1 shadow-2xl overflow-hidden relative">
         <div className="bg-[#0D0D0F] rounded-[2.3rem] p-12 md:p-24 script-font max-h-[900px] overflow-y-auto leading-relaxed relative border border-white/[0.02]">
           <div className="absolute top-10 right-10 text-[8px] font-black text-white/10 tracking-[0.6em] uppercase">TLP // ARCHIVE_01</div>
-          
+
           <div className="text-center mb-20 opacity-30 text-[10px] uppercase font-black tracking-[1em] text-taupe-accent flex items-center justify-center gap-10">
             <div className="h-px w-20 bg-current" />
             START TRANSMISSION
             <div className="h-px w-20 bg-current" />
           </div>
 
-          <div 
-            className="whitespace-pre-wrap text-[#D1D1D1] transition-all duration-300" 
+          <div
+            className="whitespace-pre-wrap text-[#D1D1D1] transition-all duration-300"
             style={{ fontSize: `${fontSize}px` }}
           >
             {parsedScriptElements}
@@ -148,8 +167,8 @@ const ScriptViewer: React.FC<ScriptViewerProps> = ({ reading, onPart2Generated }
       </div>
 
       {showTeleprompter && (
-        <TeleprompterModal 
-          script={reading.fullScript} 
+        <TeleprompterModal
+          script={reading.fullScript}
           onClose={() => setShowTeleprompter(false)}
           isPhase1={isOnlyPhase1}
           initialParams={reading.params}
