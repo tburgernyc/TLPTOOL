@@ -82,11 +82,11 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(params); }} className="neo-3d-card p-10 md:p-16 space-y-14 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-80 h-80 bg-gold-accent/5 blur-[120px] pointer-events-none" />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 relative z-10">
         <div className="space-y-4">
           <InputLabel>Primary Sign influence</InputLabel>
-          <CustomSelect 
+          <CustomSelect
             value={params.sign}
             onChange={(val) => setParams({ ...params, sign: val })}
             options={ZODIAC_SIGNS.map(sign => ({ label: sign, value: sign }))}
@@ -95,7 +95,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
 
         <div className="space-y-4">
           <InputLabel>Operational logic</InputLabel>
-          <CustomSelect 
+          <CustomSelect
             value={params.mode}
             onChange={(val) => setParams({ ...params, mode: val as ReadingMode })}
             options={[
@@ -109,7 +109,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
 
         <div className="md:col-span-2 space-y-4">
           <InputLabel>Central Narrative Anchor</InputLabel>
-          <input 
+          <input
             type="text"
             placeholder="Focal theme?"
             value={params.topic}
@@ -123,7 +123,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
           <InputLabel>Timeframe Start</InputLabel>
           <div className="relative group">
             <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gold-accent/40" />
-            <input 
+            <input
               type="date"
               value={params.startDate}
               onChange={(e) => setParams({ ...params, startDate: e.target.value })}
@@ -137,7 +137,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
           <InputLabel>Timeframe End</InputLabel>
           <div className="relative group">
             <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gold-accent/40" />
-            <input 
+            <input
               type="date"
               value={params.endDate}
               onChange={(e) => setParams({ ...params, endDate: e.target.value })}
@@ -149,7 +149,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
 
         <div className="space-y-4">
           <InputLabel>Output Depth</InputLabel>
-          <CustomSelect 
+          <CustomSelect
             value={params.length}
             onChange={(val) => setParams({ ...params, length: val as ReadingLength })}
             options={[
@@ -162,23 +162,34 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
 
         <div className="space-y-4">
           <InputLabel>Vocal Synthesis Layer</InputLabel>
-          <button 
+          <button
             type="button"
             onClick={() => setParams({ ...params, includeAudio: !params.includeAudio })}
-            className={`w-full neo-3d-input px-6 py-5 flex items-center justify-between transition-all ${params.includeAudio ? 'border-gold-accent/40 bg-gold-accent/5' : ''}`}
+            className={`w-full neo-3d-input px-6 py-5 flex items-center justify-between transition-all relative overflow-hidden ${params.includeAudio ? 'border-gold-accent/60 bg-gold-accent/10 shadow-[0_0_20px_rgba(212,175,55,0.15)]' : 'border-amber-500/30 hover:border-amber-500/50'}`}
           >
-            <span className={`text-sm font-black tracking-[0.2em] uppercase transition-colors ${params.includeAudio ? 'text-white' : 'text-slate-700'}`}>
-              {params.includeAudio ? 'ENABLED // PCM STREAM' : 'DISABLED'}
-            </span>
-            <Volume2 className={`w-5 h-5 ${params.includeAudio ? 'text-gold-accent' : 'text-slate-800'}`} />
+            {!params.includeAudio && (
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-amber-500/10 to-amber-500/5 animate-pulse pointer-events-none" />
+            )}
+            <div className="flex items-center gap-4 relative z-10">
+              <div className={`w-3 h-3 rounded-full transition-all ${params.includeAudio ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 'bg-amber-500/50'}`} />
+              <span className={`text-sm font-black tracking-[0.2em] uppercase transition-colors ${params.includeAudio ? 'text-white' : 'text-amber-500/80'}`}>
+                {params.includeAudio ? 'ENABLED // AUTO-NARRATE' : 'TAP TO ENABLE AUDIO'}
+              </span>
+            </div>
+            <Volume2 className={`w-5 h-5 relative z-10 transition-all ${params.includeAudio ? 'text-gold-accent scale-110' : 'text-amber-500/60'}`} />
           </button>
+          {params.includeAudio && (
+            <p className="text-[9px] font-bold text-emerald-500/70 uppercase tracking-widest text-center animate-in fade-in">
+              ✓ Audio will auto-play after script generation
+            </p>
+          )}
         </div>
 
         {isSpecific && (
           <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 animate-in fade-in slide-in-from-top-4 border-t border-white/[0.03] pt-12">
             <div className="space-y-4 md:col-span-2">
               <InputLabel>Target Name</InputLabel>
-              <input 
+              <input
                 type="text"
                 placeholder="Personal address name"
                 value={params.querentName || ''}
@@ -189,7 +200,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
 
             <div className="space-y-4">
               <InputLabel>Birth Date</InputLabel>
-              <input 
+              <input
                 type="date"
                 value={params.birthDate || ''}
                 onChange={(e) => setParams({ ...params, birthDate: e.target.value })}
@@ -199,7 +210,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
 
             <div className="space-y-4">
               <InputLabel>Birth Time</InputLabel>
-              <input 
+              <input
                 type="time"
                 value={params.birthTime || ''}
                 onChange={(e) => setParams({ ...params, birthTime: e.target.value })}
@@ -209,7 +220,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
 
             <div className="md:col-span-2 space-y-4">
               <InputLabel>Birth Location</InputLabel>
-              <input 
+              <input
                 type="text"
                 placeholder="City, Country"
                 value={params.birthLocation || ''}
@@ -221,7 +232,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
         )}
       </div>
 
-      <button 
+      <button
         type="submit"
         disabled={isLoading}
         className="w-full py-7 neo-3d-button bg-gradient-to-br from-[#4A4A4A] to-[#2D2D2D] !text-white rounded-2xl font-black uppercase tracking-[0.5em] text-[11px] disabled:opacity-30 flex items-center justify-center gap-6 group relative z-10"
@@ -243,7 +254,7 @@ const ReadingForm: React.FC<ReadingFormProps> = ({ onSubmit, isLoading }) => {
       <div className="flex items-start gap-5 p-6 neo-3d-input rounded-2xl text-[10px] text-slate-500 tracking-[0.3em] font-black opacity-60">
         <Info className="w-5 h-5 text-gold-accent animate-pulse" />
         <p>
-          {isManual 
+          {isManual
             ? "Manual Protocol: Structural hook first, then node capture."
             : "Automated Protocol: Full immediate narrative synthesis."}
         </p>
