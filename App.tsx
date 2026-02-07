@@ -64,9 +64,9 @@ const App: React.FC = () => {
   const generateAudioInBackground = async (readingId: string, fullScript: string) => {
     setIsGeneratingAudio(true);
     try {
-      // Add timeout protection - 180 second limit for chunked audio generation
+      // Add timeout protection - 60 second limit
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Audio generation timed out')), 180000)
+        setTimeout(() => reject(new Error('Audio generation timed out')), 60000)
       );
 
       const audioData = await Promise.race([
