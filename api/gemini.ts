@@ -207,35 +207,81 @@ export default async function handler(req: any, res: any) {
 
     } else if (action === 'generateSpeech') {
       const { text } = payload;
-      // TTS models have stricter limits - use 2500 chars max for reliability
       const cleanText = text
         .replace(/\[PAUSE\]/g, '...')
-        .replace(/\[EMPHASIS\]/g, '')
-        .substring(0, 2500);
+        .replace(/\[EMPHASIS\]/g, '');
 
-      console.log(`[TTS] Generating speech for ${cleanText.length} chars`);
+      // Split text into chunks at sentence boundaries (~2000 chars each for safety margin)
+      const CHUNK_SIZE = 2000;
+      const chunks: string[] = [];
+      let remaining = cleanText;
+
+      while (remaining.length > 0) {
+        if (remaining.length <= CHUNK_SIZE) {
+          chunks.push(remaining);
+          break;
+        }
+
+        // Find a good break point (sentence end) near CHUNK_SIZE
+        let breakPoint = CHUNK_SIZE;
+        const sentenceEnd = remaining.substring(0, CHUNK_SIZE).lastIndexOf('. ');
+        if (sentenceEnd > CHUNK_SIZE * 0.5) {
+          breakPoint = sentenceEnd + 2; // Include the period and space
+        }
+
+        chunks.push(remaining.substring(0, breakPoint));
+        remaining = remaining.substring(breakPoint).trim();
+      }
+
+      console.log(`[TTS] Processing ${chunks.length} chunks for ${cleanText.length} total chars`);
 
       try {
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash-preview-tts",
-          contents: [{ parts: [{ text: cleanText }] }],
-          config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: {
-              // Use Orus for a grounded male voice
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Orus' } },
-            },
-          },
-        });
+        // Generate audio for each chunk
+        const audioChunks: string[] = [];
 
-        console.log(`[TTS] Response received, extracting audio data`);
-        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (!base64Audio) {
-          console.error('[TTS] No audio data in response:', JSON.stringify(response.candidates?.[0]?.content?.parts?.[0]));
-          throw new Error("Vocal synthesis returned empty audio data.");
+        for (let i = 0; i < chunks.length; i++) {
+          console.log(`[TTS] Generating chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)`);
+
+          const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text: chunks[i] }] }],
+            config: {
+              responseModalities: [Modality.AUDIO],
+              speechConfig: {
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Orus' } },
+              },
+            },
+          });
+
+          const chunkAudio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+          if (!chunkAudio) {
+            console.error(`[TTS] Chunk ${i + 1} returned no audio`);
+            throw new Error(`Vocal synthesis failed on segment ${i + 1}`);
+          }
+
+          audioChunks.push(chunkAudio);
+          console.log(`[TTS] Chunk ${i + 1} complete: ${chunkAudio.length} bytes`);
         }
-        console.log(`[TTS] Audio data extracted: ${base64Audio.length} bytes`);
-        result = base64Audio;
+
+        // Concatenate all audio chunks (base64 encoded PCM can be concatenated)
+        // For multiple chunks, we need to decode, concat, and re-encode
+        if (audioChunks.length === 1) {
+          result = audioChunks[0];
+        } else {
+          // Decode all base64 chunks to binary
+          const binaryChunks = audioChunks.map(chunk => {
+            const binary = Buffer.from(chunk, 'base64');
+            return binary;
+          });
+
+          // Concatenate all binary data
+          const totalLength = binaryChunks.reduce((sum, b) => sum + b.length, 0);
+          const combined = Buffer.concat(binaryChunks, totalLength);
+
+          // Re-encode to base64
+          result = combined.toString('base64');
+          console.log(`[TTS] Combined ${audioChunks.length} chunks into ${result.length} bytes`);
+        }
       } catch (ttsError: any) {
         console.error('[TTS] Speech generation failed:', ttsError.message, ttsError);
         throw new Error(`TTS Error: ${ttsError.message || 'Unknown synthesis failure'}`);
