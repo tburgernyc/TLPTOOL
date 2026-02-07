@@ -207,21 +207,39 @@ export default async function handler(req: any, res: any) {
 
     } else if (action === 'generateSpeech') {
       const { text } = payload;
-      const cleanText = text.replace(/\[PAUSE\]/g, '...').replace(/\[EMPHASIS\]/g, '').substring(0, 5000);
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Speak this tarot script in a grounded male voice: ${cleanText}` }] }],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-          },
-        },
-      });
+      // TTS models have stricter limits - use 2500 chars max for reliability
+      const cleanText = text
+        .replace(/\[PAUSE\]/g, '...')
+        .replace(/\[EMPHASIS\]/g, '')
+        .substring(0, 2500);
 
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (!base64Audio) throw new Error("Vocal synthesis failure.");
-      result = base64Audio;
+      console.log(`[TTS] Generating speech for ${cleanText.length} chars`);
+
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash-preview-tts",
+          contents: [{ parts: [{ text: cleanText }] }],
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              // Use Orus for a grounded male voice
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Orus' } },
+            },
+          },
+        });
+
+        console.log(`[TTS] Response received, extracting audio data`);
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) {
+          console.error('[TTS] No audio data in response:', JSON.stringify(response.candidates?.[0]?.content?.parts?.[0]));
+          throw new Error("Vocal synthesis returned empty audio data.");
+        }
+        console.log(`[TTS] Audio data extracted: ${base64Audio.length} bytes`);
+        result = base64Audio;
+      } catch (ttsError: any) {
+        console.error('[TTS] Speech generation failed:', ttsError.message, ttsError);
+        throw new Error(`TTS Error: ${ttsError.message || 'Unknown synthesis failure'}`);
+      }
 
     } else {
       return res.status(400).json({ error: 'Invalid action' });
