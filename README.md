@@ -1,44 +1,46 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # Tarot Light Path Video Tool
 
-This is a React application powered by Google's Gemini AI, designed to generate and read Tarot scripts.
+Making a tarot video alone means managing the cards, the script, and the teleprompter at the same time. TLPTOOL brings those steps into one React app. In the manual workflow, read the generated introduction, speak the 13 cards into the microphone, and let the app draft the rest of the reading from the spread. The teleprompter advances on a timer, so you can keep your attention on the camera and the script.
 
-## Run Locally
+The app can generate spoken audio as well as text. It is designed to help a solo operator prepare and deliver a reading from a regular laptop, but browser speech recognition, microphone access, an internet connection, and a Gemini API key are required for the corresponding features. The current teleprompter does not track spoken words to control its scroll.
 
-**Prerequisites:** Node.js v20+
+## How it works
 
-1.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+- **React and Vite frontend:** collect reading details, show card spreads, and present scripts.
+- **Manual card capture:** browser speech recognition parses spoken card names into a 13-card spread. Cards can be reviewed and edited before the reading is generated.
+- **Script generation:** the server-side Gemini integration generates the introduction and reading text. The astrology request asks Gemini for moon phase, transits, retrogrades, and a summary; the repository does not include a dedicated ephemeris integration to independently verify those values.
+- **Teleprompter and audio:** the teleprompter scrolls through the script on a timer. Text-to-speech is an optional Gemini feature.
+- **Local development API:** `npm run dev` starts the Express/Vite development server, which exposes the API routes locally. Production API functions are in `api/`.
 
-2.  **Configure Environment:**
-    Create a `.env` file in the root directory and add your Gemini API key:
-    ```env
-    GEMINI_API_KEY=your_api_key_here
-    ```
+## Performance & Engineering Notes
 
-3.  **Start the Development Server:**
-    ```bash
-    npm run dev
-    ```
-    This command starts a custom development server (using `tsx` and `express`) that serves the Vite frontend and proxies API requests to `api/` functions, simulating the Vercel serverless environment.
+- The flattened tarot card database is created on first request and cached for later lookups in `tarotCardDatabase.ts` (main commit `9d31d48`). App state uses a lazy initializer in `App.tsx` (main commit `b758fd5`). These changes do not establish a measured 50% startup-time reduction.
+- `cardMatcher.ts` builds cached exact and phonetic lookup maps for card matching (main commit `bb8b038`). `ManualCardEntry.tsx` debounces matching and validation; the parsing debounce is in main commit `80b9382`.
+- `cardMatcher.ts` consolidates phonetic normalization patterns (main commit `2c8847b`), while `api/gemini.ts` combines script-cleanup replacements (main commit `a7e46b4`).
+- `useSpeechRecognition.ts` limits volume-meter updates to about every 50 ms. `AudioPlayer.tsx` uses browser audio decoding; its optimization is in main commit `603d902`.
 
-4.  **Verify Setup:**
-    -   Open your browser to `http://localhost:3000`.
-    -   Check the API health status at `http://localhost:3000/api/health`. You should receive a JSON response with `"status": "ok"`.
+## Run locally
 
-## Deployment (Vercel)
+**Prerequisite:** Node.js 20 or newer.
 
-This project is designed to be deployed on Vercel.
+1. Install the locked dependencies:
 
-1.  **Import Project:** Import the repository into Vercel.
-2.  **Environment Variables:** Add `GEMINI_API_KEY` to the project's Environment Variables settings in the Vercel dashboard.
-3.  **Build Settings:** The default settings (Framework: Vite) should work correctly.
-    -   Build Command: `npm run build`
-    -   Output Directory: `dist`
+   ```bash
+   npm ci
+   ```
 
-The API functions in `api/` will be automatically deployed as Vercel Serverless Functions.
+2. Copy `.env.example` to `.env` and set `GEMINI_API_KEY` in `.env`. Keep real keys local and do not commit `.env`.
+
+3. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+4. Open `http://localhost:3000`. The local API health endpoint is `http://localhost:3000/api/health`.
+
+To create a production frontend build, run `npm run build`.
+
+## Deploy to Vercel
+
+Set `GEMINI_API_KEY` in the Vercel project environment settings. Use `npm run build` as the build command and `dist` as the output directory. The functions in `api/` provide the production API endpoints.
