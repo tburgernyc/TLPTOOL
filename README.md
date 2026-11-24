@@ -14,10 +14,10 @@ The app can generate spoken audio as well as text. It is designed to help a solo
 
 ## Performance & Engineering Notes
 
-- The flattened tarot card database is created on first request and cached for later lookups in `tarotCardDatabase.ts` (main commit `9d31d48`). App state uses a lazy initializer in `App.tsx` (main commit `b758fd5`). These changes do not establish a measured 50% startup-time reduction.
-- `cardMatcher.ts` builds cached exact and phonetic lookup maps for card matching (main commit `bb8b038`). `ManualCardEntry.tsx` debounces matching and validation; the parsing debounce is in main commit `80b9382`.
-- `cardMatcher.ts` consolidates phonetic normalization patterns (main commit `2c8847b`), while `api/gemini.ts` combines script-cleanup replacements (main commit `a7e46b4`).
-- `useSpeechRecognition.ts` limits volume-meter updates to about every 50 ms. `AudioPlayer.tsx` uses browser audio decoding; its optimization is in main commit `603d902`.
+- The flattened tarot card database is created on first request and cached for later lookups in `tarotCardDatabase.ts` (main commit `3b1f4fd`). App state uses a lazy initializer in `App.tsx` (main commit `9afbc12`). These changes do not establish a measured 50% startup-time reduction.
+- `cardMatcher.ts` builds cached exact and phonetic lookup maps for card matching (main commit `95ddb99`). `ManualCardEntry.tsx` debounces matching and validation; the parsing debounce is in main commit `cb72402`.
+- `cardMatcher.ts` consolidates phonetic normalization patterns (main commit `d4f089a`), while `api/gemini.ts` combines script-cleanup replacements (main commit `2e8a705`).
+- `useSpeechRecognition.ts` limits volume-meter updates to about every 50 ms. `AudioPlayer.tsx` uses browser audio decoding; its optimization is in main commit `c7d8382`.
 
 ## Run locally
 
