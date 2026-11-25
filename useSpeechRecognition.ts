@@ -9,9 +9,17 @@ interface UseSpeechRecognitionReturn {
   stop: () => void;
   reset: () => void;
   error: string | null;
+  subscribeToVolume: (callback: (volume: number) => void) => () => void;
 }
 
-export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
+interface UseSpeechRecognitionOptions {
+  enableVolumeMeter?: boolean;
+  disableVolumeState?: boolean;
+}
+
+export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}): UseSpeechRecognitionReturn => {
+  const { enableVolumeMeter = true, disableVolumeState = false } = options;
+
   const [isListening, setIsListening] = useState(false);
   const isListeningRef = useRef(false);
   const [transcript, setTranscript] = useState('');
@@ -25,8 +33,18 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const restartTimeoutRef = useRef<number | null>(null);
+  const volumeSubscribersRef = useRef<Set<(vol: number) => void>>(new Set());
+
+  const subscribeToVolume = useCallback((callback: (volume: number) => void) => {
+    volumeSubscribersRef.current.add(callback);
+    return () => {
+      volumeSubscribersRef.current.delete(callback);
+    };
+  }, []);
 
   const startVolumeAnalysis = async () => {
+    if (!enableVolumeMeter) return;
+
     try {
       if (audioContextRef.current) return;
       
@@ -44,18 +62,32 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
+      let lastVolumeUpdate = 0;
+      const VOLUME_THROTTLE_MS = 50;
+
       const updateVolume = () => {
         if (!analyserRef.current || !isListeningRef.current) {
-          setVolume(0);
+          if (!disableVolumeState) setVolume(0);
+          volumeSubscribersRef.current.forEach(cb => cb(0));
           return;
         }
-        analyserRef.current.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
+
+        const now = Date.now();
+        if (now - lastVolumeUpdate > VOLUME_THROTTLE_MS) {
+          analyserRef.current.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / bufferLength;
+          const vol = Math.min(average * 2.5, 100); // Normalized
+
+          if (!disableVolumeState) setVolume(vol);
+          volumeSubscribersRef.current.forEach(cb => cb(vol));
+
+          lastVolumeUpdate = now;
         }
-        const average = sum / bufferLength;
-        setVolume(Math.min(average * 2.5, 100)); // Normalized
+
         if (isListeningRef.current) requestAnimationFrame(updateVolume);
       };
       
@@ -74,7 +106,8 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
     }
-    setVolume(0);
+    if (!disableVolumeState) setVolume(0);
+    volumeSubscribersRef.current.forEach(cb => cb(0));
   };
 
   const stop = useCallback(() => {
@@ -201,5 +234,5 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
     };
   }, []);
 
-  return { isListening, transcript, interimTranscript, volume, start, stop, reset, error };
+  return { isListening, transcript, interimTranscript, volume, start, stop, reset, error, subscribeToVolume };
 };

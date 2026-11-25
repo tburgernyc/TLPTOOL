@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { flatCardDatabase } from './tarotCardDatabase';
+import { getFlatCardDatabase } from './tarotCardDatabase';
 import { parseCardFromSpeech } from './cardMatcher';
 import { Check, X, Target, Activity } from 'lucide-react';
 
@@ -17,6 +17,7 @@ interface CardCaptureWidgetProps {
   stop: () => void;
   reset: () => void;
   error?: string | null;
+  subscribeToVolume?: (callback: (volume: number) => void) => () => void;
   // Externalized state for keyboard shortcuts
   pendingCard: any;
   setPendingCard: (val: any) => void;
@@ -36,9 +37,19 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
   reset,
   error,
   pendingCard,
-  setPendingCard
+  setPendingCard,
+  subscribeToVolume
 }) => {
   const [listeningStatus, setListeningStatus] = useState('');
+  const [localVolume, setLocalVolume] = useState(volume);
+
+  useEffect(() => {
+    if (subscribeToVolume) {
+      return subscribeToVolume(setLocalVolume);
+    } else {
+      setLocalVolume(volume);
+    }
+  }, [subscribeToVolume, volume]);
   
   // Use a local "session transcript" to detect new matches within one card capture cycle
   const [lastProcessedTranscript, setLastProcessedTranscript] = useState('');
@@ -51,7 +62,7 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
       if (fullText && fullText !== lastProcessedTranscript) {
         const timeoutId = setTimeout(() => {
           setListeningStatus('Scanning...');
-          const parsed = parseCardFromSpeech(fullText, flatCardDatabase);
+          const parsed = parseCardFromSpeech(fullText, getFlatCardDatabase());
 
           if (parsed.success) {
             setPendingCard(parsed);
@@ -149,7 +160,7 @@ const CardCaptureWidget: React.FC<CardCaptureWidgetProps> = ({
               
               {isListening && (
                 <div className="absolute -bottom-2 -right-2 flex items-center justify-center w-6 h-6 bg-black rounded-full border border-white/10 overflow-hidden">
-                   <div className="w-1 bg-emerald-500 rounded-full transition-all duration-75" style={{ height: `${Math.max(4, volume / 4)}px` }} />
+                   <div className="w-1 bg-emerald-500 rounded-full transition-all duration-75" style={{ height: `${Math.max(4, localVolume / 4)}px` }} />
                 </div>
               )}
             </div>
